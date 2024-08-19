@@ -108,8 +108,23 @@ fn main() {
         gl::Disable(gl::MULTISAMPLE);
         gl::Enable(gl::BLEND);
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-        gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS);
-        gl::DebugMessageCallback(Some(util::debug_callback), ptr::null());
+
+        // Query OpenGL version
+        let version = util::get_gl_string(gl::VERSION);
+        let version_major: u32 = version.chars().next().unwrap().to_digit(10).unwrap();
+        let version_minor: u32 = version.chars().nth(2).unwrap().to_digit(10).unwrap();
+
+        // MacOS uses OpenGL 4.1, which doesn't support the debug output functionality introduced in OpenGL 4.3
+        if (version_major > 4) || (version_major == 4 && version_minor >= 3) {
+            gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS);
+            gl::DebugMessageCallback(Some(util::debug_callback), ptr::null());
+        } else {
+            // Simple error checking
+            let error = gl::GetError();
+            if error != gl::NO_ERROR {
+                println!("OpenGL Error: {}", error);
+            }
+        }
 
         // Print some diagnostics
         println!("{}: {}", util::get_gl_string(gl::VENDOR), util::get_gl_string(gl::RENDERER));
