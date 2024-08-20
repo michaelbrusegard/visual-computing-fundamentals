@@ -30,5 +30,3 @@ If you want to run the project without rendering on a separate thread (so it wor
 ```bash
 cargo run --bin macos
 ```
-
-This will run the project with rendering on a separate thread.
