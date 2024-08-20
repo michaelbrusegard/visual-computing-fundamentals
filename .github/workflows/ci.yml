@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+defaults:
+  run:
+    working-directory: ./gloom-rs
+
 jobs:
   build-check:
     name: Build Check
@@ -15,18 +19,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: gloom-rs
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: moonrepo/setup-rust@v1
         with:
-          toolchain: stable
-          override: true
+          components: rustc, cargo
       - name: Build Project
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose
+        run: cargo build --verbose
 
   format-check:
     name: Format Check
@@ -34,18 +32,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: gloom-rs
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: moonrepo/setup-rust@v1
         with:
-          toolchain: stable
-          override: true
+          components: rustfmt
       - name: Check Formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
+        run: cargo fmt -- --check
 
   lint-check:
     name: Lint Check
@@ -53,15 +45,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: gloom-rs
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: moonrepo/setup-rust@v1
         with:
-          toolchain: stable
-          override: true
+          components: clippy
       - name: Run Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -- -D warnings
+        run: cargo clippy --workspace
