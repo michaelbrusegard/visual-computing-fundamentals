@@ -8,13 +8,19 @@
 #![allow(unused_variables)]
 */
 extern crate nalgebra_glm as glm;
-use std::{ mem, ptr, os::raw::c_void };
-use std::sync::{Mutex, Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
+use std::{mem, os::raw::c_void, ptr};
 
 mod shader;
 mod util;
 
-use glutin::event::{Event, WindowEvent, DeviceEvent, KeyboardInput, ElementState::{Pressed, Released}, VirtualKeyCode::{self, *}};
+use glutin::event::{
+    DeviceEvent,
+    ElementState::{Pressed, Released},
+    Event, KeyboardInput,
+    VirtualKeyCode::{self, *},
+    WindowEvent,
+};
 use glutin::event_loop::ControlFlow;
 
 // initial window size
@@ -50,7 +56,6 @@ fn offset<T>(n: u32) -> *const c_void {
 // Get a null pointer (equivalent to an offset of 0)
 // ptr::null()
 
-
 // == // Generate your VAO here
 unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
     // Implement me!
@@ -69,7 +74,6 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
     0
 }
 
-
 fn main() {
     // Set up the necessary objects to deal with windows and event handling
     let el = glutin::event_loop::EventLoop::new();
@@ -77,8 +81,7 @@ fn main() {
         .with_title("Gloom-rs")
         .with_resizable(true)
         .with_inner_size(glutin::dpi::LogicalSize::new(INITIAL_SCREEN_W, INITIAL_SCREEN_H));
-    let cb = glutin::ContextBuilder::new()
-        .with_vsync(true);
+    let cb = glutin::ContextBuilder::new().with_vsync(true);
     let windowed_context = cb.build_windowed(wb, &el).unwrap();
     // Acquire the OpenGL Context and load the function pointers.
     let context = unsafe { windowed_context.make_current().unwrap() };
@@ -96,7 +99,6 @@ fn main() {
 
     // Set up shared tuple for tracking changes to the window size
     let arc_window_size = Arc::new(Mutex::new((INITIAL_SCREEN_W, INITIAL_SCREEN_H, false)));
-
 
     let mut window_aspect_ratio = INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32;
 
@@ -135,12 +137,9 @@ fn main() {
     let first_frame_time = std::time::Instant::now();
     let mut previous_frame_time = first_frame_time;
 
-
     // == //
     // == // From here on down there are only internals.
     // == //
-
-
 
     // Start the event loop -- This is where window events are initially handled
     el.run(move |event, _, control_flow| {
@@ -157,9 +156,14 @@ fn main() {
                 *control_flow = ControlFlow::Exit;
             }
             // Keep track of currently pressed keys to send to the rendering thread
-            Event::WindowEvent { event: WindowEvent::KeyboardInput {
-                    input: KeyboardInput { state: key_state, virtual_keycode: Some(keycode), .. }, .. }, .. } => {
-
+            Event::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input: KeyboardInput { state: key_state, virtual_keycode: Some(keycode), .. },
+                        ..
+                    },
+                ..
+            } => {
                 if let Ok(mut keys) = arc_pressed_keys.lock() {
                     match key_state {
                         Released => {
@@ -167,7 +171,7 @@ fn main() {
                                 let i = keys.iter().position(|&k| k == keycode).unwrap();
                                 keys.remove(i);
                             }
-                        },
+                        }
                         Pressed => {
                             if !keys.contains(&keycode) {
                                 keys.push(keycode);
@@ -178,9 +182,13 @@ fn main() {
 
                 // Handle Escape and Q keys separately
                 match keycode {
-                    Escape => { *control_flow = ControlFlow::Exit; }
-                    Q      => { *control_flow = ControlFlow::Exit; }
-                    _      => { }
+                    Escape => {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    Q => {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    _ => {}
                 }
             }
             Event::DeviceEvent { event: DeviceEvent::MouseMotion { delta }, .. } => {
@@ -193,7 +201,6 @@ fn main() {
                 // == // Set up your VAO around here
 
                 let my_vao = unsafe { 1337 };
-
 
                 // == // Set up your shaders here
 
@@ -212,7 +219,6 @@ fn main() {
                 };
                 */
 
-
                 // Used to demonstrate keyboard handling for exercise 2.
                 let mut _arbitrary_number = 0.0; // feel free to remove
 
@@ -228,7 +234,9 @@ fn main() {
                         window_aspect_ratio = new_size.0 as f32 / new_size.1 as f32;
                         (*new_size).2 = false;
                         println!("Window was resized to {}x{}", new_size.0, new_size.1);
-                        unsafe { gl::Viewport(0, 0, new_size.0 as i32, new_size.1 as i32); }
+                        unsafe {
+                            gl::Viewport(0, 0, new_size.0 as i32, new_size.1 as i32);
+                        }
                     }
                 }
 
@@ -238,7 +246,6 @@ fn main() {
                         match key {
                             // The `VirtualKeyCode` enum is defined here:
                             //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
-
                             VirtualKeyCode::A => {
                                 _arbitrary_number += delta_time;
                             }
@@ -246,15 +253,13 @@ fn main() {
                                 _arbitrary_number -= delta_time;
                             }
 
-
                             // default handler:
-                            _ => { }
+                            _ => {}
                         }
                     }
                 }
                 // Handle mouse movement. delta contains the x and y movement of the mouse since last frame in pixels
                 if let Ok(mut delta) = arc_mouse_delta.lock() {
-
                     // == // Optionally access the accumulated mouse movement between
                     // == // frames here with `delta.0` and `delta.1`
 
@@ -263,23 +268,18 @@ fn main() {
 
                 // == // Please compute camera transforms here (exercise 2 & 3)
 
-
                 unsafe {
                     // Clear the color and depth buffers
                     gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
                     gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-
                     // == // Issue the necessary gl:: commands to draw your scene here
-
-
-
                 }
 
                 // Display the new color buffer on the display
                 context.swap_buffers().unwrap(); // we use "double buffering" to avoid artifacts
             }
-            _ => { }
+            _ => {}
         }
     });
 }

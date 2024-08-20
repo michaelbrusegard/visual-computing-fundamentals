@@ -1,10 +1,5 @@
 use gl;
-use std::{
-    ptr,
-    str,
-    ffi::CString,
-    path::Path,
-};
+use std::{ffi::CString, path::Path, ptr, str};
 
 pub struct Shader {
     pub program_id: u32,
@@ -12,7 +7,7 @@ pub struct Shader {
 
 pub struct ShaderBuilder {
     program_id: u32,
-    shaders: Vec::<u32>,
+    shaders: Vec<u32>,
 }
 
 #[allow(dead_code)]
@@ -39,11 +34,11 @@ impl Shader {
 impl Into<gl::types::GLenum> for ShaderType {
     fn into(self) -> gl::types::GLenum {
         match self {
-            ShaderType::Vertex                  => { gl::VERTEX_SHADER          },
-            ShaderType::Fragment                => { gl::FRAGMENT_SHADER        },
-            ShaderType::TessellationControl     => { gl::TESS_CONTROL_SHADER    },
-            ShaderType::TessellationEvaluation  => { gl::TESS_EVALUATION_SHADER } ,
-            ShaderType::Geometry                => { gl::GEOMETRY_SHADER        },
+            ShaderType::Vertex => gl::VERTEX_SHADER,
+            ShaderType::Fragment => gl::FRAGMENT_SHADER,
+            ShaderType::TessellationControl => gl::TESS_CONTROL_SHADER,
+            ShaderType::TessellationEvaluation => gl::TESS_EVALUATION_SHADER,
+            ShaderType::Geometry => gl::GEOMETRY_SHADER,
         }
     }
 }
@@ -51,29 +46,25 @@ impl Into<gl::types::GLenum> for ShaderType {
 impl ShaderType {
     fn from_ext(ext: &std::ffi::OsStr) -> Result<ShaderType, String> {
         match ext.to_str().expect("Failed to read extension") {
-            "vert" => { Ok(ShaderType::Vertex) },
-            "frag" => { Ok(ShaderType::Fragment) },
-            "tcs"  => { Ok(ShaderType::TessellationControl) },
-            "tes"  => { Ok(ShaderType::TessellationEvaluation) },
-            "geom" => { Ok(ShaderType::Geometry) },
-            e => { Err(e.to_string()) },
+            "vert" => Ok(ShaderType::Vertex),
+            "frag" => Ok(ShaderType::Fragment),
+            "tcs" => Ok(ShaderType::TessellationControl),
+            "tes" => Ok(ShaderType::TessellationEvaluation),
+            "geom" => Ok(ShaderType::Geometry),
+            e => Err(e.to_string()),
         }
     }
 }
 
 impl ShaderBuilder {
     pub unsafe fn new() -> ShaderBuilder {
-        ShaderBuilder {
-            program_id: gl::CreateProgram(),
-            shaders: vec![],
-        }
+        ShaderBuilder { program_id: gl::CreateProgram(), shaders: vec![] }
     }
 
     pub unsafe fn attach_file(self, shader_path: &str) -> ShaderBuilder {
         let path = Path::new(shader_path);
         if let Some(extension) = path.extension() {
-            let shader_type = ShaderType::from_ext(extension)
-                .expect("Failed to parse file extension.");
+            let shader_type = ShaderType::from_ext(extension).expect("Failed to parse file extension.");
             let shader_src = std::fs::read_to_string(path)
                 .expect(&format!("Failed to read shader source. {}", shader_path));
             self.compile_shader(&shader_src, shader_type)
@@ -147,8 +138,6 @@ impl ShaderBuilder {
             gl::DeleteShader(shader);
         }
 
-        Shader {
-            program_id: self.program_id
-        }
+        Shader { program_id: self.program_id }
     }
 }
