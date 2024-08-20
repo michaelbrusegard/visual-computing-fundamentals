@@ -1,5 +1,9 @@
 use std::ffi::CString;
 
+/// # Safety
+///
+/// This function is unsafe because it calls the OpenGL function `gl::GetString`, which returns a pointer to a static string.
+/// The caller must ensure that the OpenGL context is correctly set up and that the `name` parameter is a valid enum for `gl::GetString`.
 pub unsafe fn get_gl_string(name: gl::types::GLenum) -> String {
    std::ffi::CStr::from_ptr(gl::GetString(name) as *mut libc::c_char).to_string_lossy().to_string()
 }
