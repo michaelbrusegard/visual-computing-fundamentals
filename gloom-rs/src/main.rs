@@ -9,7 +9,11 @@
 */
 extern crate nalgebra_glm as glm;
 use std::sync::{Arc, Mutex};
-use std::{mem, os::raw::c_void, ptr};
+use std::{
+   // mem,
+   // os::raw::c_void,
+   ptr,
+};
 
 mod shader;
 mod util;
@@ -31,48 +35,48 @@ const INITIAL_SCREEN_H: u32 = 600;
 
 // Get the size of an arbitrary array of numbers measured in bytes
 // Example usage:  byte_size_of_array(my_array)
-fn byte_size_of_array<T>(val: &[T]) -> isize {
-   std::mem::size_of_val(&val[..]) as isize
-}
+// fn byte_size_of_array<T>(val: &[T]) -> isize {
+//    std::mem::size_of_val(&val[..]) as isize
+// }
 
 // Get the OpenGL-compatible pointer to an arbitrary array of numbers
 // Example usage:  pointer_to_array(my_array)
-fn pointer_to_array<T>(val: &[T]) -> *const c_void {
-   &val[0] as *const T as *const c_void
-}
+// fn pointer_to_array<T>(val: &[T]) -> *const c_void {
+//    &val[0] as *const T as *const c_void
+// }
 
 // Get the size of the given type in bytes
 // Example usage:  size_of::<u64>()
-fn size_of<T>() -> i32 {
-   mem::size_of::<T>() as i32
-}
+// fn size_of<T>() -> i32 {
+//    mem::size_of::<T>() as i32
+// }
 
 // Get an offset in bytes for n units of type T, represented as a relative pointer
 // Example usage:  offset::<u64>(4)
-fn offset<T>(n: u32) -> *const c_void {
-   (n * mem::size_of::<T>() as u32) as *const T as *const c_void
-}
+// fn offset<T>(n: u32) -> *const c_void {
+//    (n * mem::size_of::<T>() as u32) as *const T as *const c_void
+// }
 
 // Get a null pointer (equivalent to an offset of 0)
 // ptr::null()
 
 // == // Generate your VAO here
-unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
-   // Implement me!
-
-   // Also, feel free to delete comments :)
-
-   // This should:
-   // * Generate a VAO and bind it
-   // * Generate a VBO and bind it
-   // * Fill it with data
-   // * Configure a VAP for the data and enable it
-   // * Generate a IBO and bind it
-   // * Fill it with data
-   // * Return the ID of the VAO
-
-   0
-}
+// unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
+//    // Implement me!
+//
+//    // Also, feel free to delete comments :)
+//
+//    // This should:
+//    // * Generate a VAO and bind it
+//    // * Generate a VBO and bind it
+//    // * Fill it with data
+//    // * Configure a VAP for the data and enable it
+//    // * Generate a IBO and bind it
+//    // * Fill it with data
+//    // * Return the ID of the VAO
+//
+//    0
+// }
 
 fn main() {
    // Set up the necessary objects to deal with windows and event handling
@@ -100,7 +104,7 @@ fn main() {
    // Set up shared tuple for tracking changes to the window size
    let arc_window_size = Arc::new(Mutex::new((INITIAL_SCREEN_W, INITIAL_SCREEN_H, false)));
 
-   let mut window_aspect_ratio = INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32;
+   // let mut window_aspect_ratio = INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32;
 
    // Set up openGL
    unsafe {
@@ -200,7 +204,7 @@ fn main() {
          Event::MainEventsCleared => {
             // == // Set up your VAO around here
 
-            let my_vao = unsafe { 1337 };
+            // let my_vao = unsafe { 1337 };
 
             // == // Set up your shaders here
 
@@ -224,15 +228,15 @@ fn main() {
 
             // Compute time passed since the previous frame and since the start of the program
             let now = std::time::Instant::now();
-            let elapsed = now.duration_since(first_frame_time).as_secs_f32();
+            // let elapsed = now.duration_since(first_frame_time).as_secs_f32();
             let delta_time = now.duration_since(previous_frame_time).as_secs_f32();
             previous_frame_time = now;
 
             if let Ok(mut new_size) = arc_window_size.lock() {
                if new_size.2 {
                   context.resize(glutin::dpi::PhysicalSize::new(new_size.0, new_size.1));
-                  window_aspect_ratio = new_size.0 as f32 / new_size.1 as f32;
-                  (*new_size).2 = false;
+                  // window_aspect_ratio = new_size.0 as f32 / new_size.1 as f32;
+                  new_size.2 = false;
                   println!("Window was resized to {}x{}", new_size.0, new_size.1);
                   unsafe {
                      gl::Viewport(0, 0, new_size.0 as i32, new_size.1 as i32);

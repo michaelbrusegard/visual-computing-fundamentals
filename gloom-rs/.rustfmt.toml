@@ -1,12 +1,5 @@
 edition = "2021"
 max_width = 110
-hard_tabs = false
 tab_spaces = 3
 newline_style = "Unix"
 use_small_heuristics = "Max"
-indent_style = "Block"
-trailing_comma = "Always"
-space_around_ranges = true
-reorder_imports = true
-max_blank_lines = 1
-spaces_around_comments = true

@@ -1,4 +1,3 @@
-use libc;
 use std::ffi::CString;
 
 pub unsafe fn get_gl_string(name: gl::types::GLenum) -> String {
