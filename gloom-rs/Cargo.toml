@@ -1,10 +1,12 @@
 [package]
 name = "gloom-rs"
 version = "0.3.0"
+default-run = "gloom-rs" # or "thread"
 authors = [
     "Peder b. Sundt <pbsds@hotmail.com>",
     "Michael H. Gimle <michael.gimle@gmail.com>",
     "Michael Brusegard <56915010+michaelbrusegard@users.noreply.github.com>",
+    "Christopher Braathen <??>",
 ]
 edition = "2021" # rust edition
 
