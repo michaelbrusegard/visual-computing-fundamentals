@@ -1,0 +1,53 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+defaults:
+  run:
+    working-directory: ./gloom-rs
+
+jobs:
+  build-check:
+    name: Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          components: rustc, cargo
+      - name: Build Project
+        run: cargo build --verbose
+
+  format-check:
+    name: Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          components: rustfmt
+      - name: Check Formatting
+        run: cargo fmt -- --check
+
+  lint-check:
+    name: Lint Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          components: clippy
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
