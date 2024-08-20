@@ -54,20 +54,34 @@ fn offset<T>(n: u32) -> *const c_void {
 
 // == // Generate your VAO here
 unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
-    // Implement me!
+    // Generate a VAO and bind it
+    let mut vao: u32 = 0;
+    gl::GenVertexArrays(1, &mut vao);
+    gl::BindVertexArray(vao);
 
-    // Also, feel free to delete comments :)
+    // Generate a VBO and bind it
+    let mut vbo: u32 = 0;
+    gl::GenBuffers(1, &mut vbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
-    // This should:
-    // * Generate a VAO and bind it
-    // * Generate a VBO and bind it
-    // * Fill it with data
-    // * Configure a VAP for the data and enable it
-    // * Generate a IBO and bind it
-    // * Fill it with data
-    // * Return the ID of the VAO
+    // Fill it with data
+    gl::BufferData(gl::ARRAY_BUFFER, byte_size_of_array(vertices), pointer_to_array(vertices), gl::STATIC_DRAW);
 
-    0
+    // Configure a VAP
+    let stride = 3 * size_of::<f32>() as i32;
+    gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, ptr::null());
+    gl::EnableVertexAttribArray(0);
+
+    // Generate a IBO and bind it
+    let mut ibo: u32 = 0;
+    gl::GenBuffers(1, &mut ibo);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+
+    // Fill the IBO with data
+    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, byte_size_of_array(indices), pointer_to_array(indices), gl::STATIC_DRAW);
+
+    // Return the id of the VAO
+    vao
 }
 
 
@@ -132,26 +146,24 @@ fn main() {
 
         // == // Set up your VAO around here
 
-        let my_vao = unsafe { 1337 };
-
+        // Triangle
+        let vertices: Vec<f32> = vec![
+            -0.6, -0.6, 0.0, 
+            0.6, -0.6, 0.0, 
+            0.0, 0.6, 0.0,
+        ];
+        let indices: Vec<u32> = vec![0, 1, 2];
+        let my_vao: u32 = unsafe {create_vao(&vertices, &indices)};
 
         // == // Set up your shaders here
 
-        // Basic usage of shader helper:
-        // The example code below creates a 'shader' object.
-        // It which contains the field `.program_id` and the method `.activate()`.
-        // The `.` in the path is relative to `Cargo.toml`.
-        // This snippet is not enough to do the exercise, and will need to be modified (outside
-        // of just using the correct path), but it only needs to be called once
-
-        /*
+        // Load and link the vertex shader and fragment shader
         let simple_shader = unsafe {
             shader::ShaderBuilder::new()
-                .attach_file("./path/to/simple/shader.file")
+                .attach_file("./shaders/simple.vert")
+                .attach_file("./shaders/simple.frag")
                 .link()
         };
-        */
-
 
         // Used to demonstrate keyboard handling for exercise 2.
         let mut _arbitrary_number = 0.0; // feel free to remove
@@ -218,8 +230,14 @@ fn main() {
 
                 // == // Issue the necessary gl:: commands to draw your scene here
 
+                // Bind the VAO
+                gl::BindVertexArray(my_vao);
 
+                // Activate the vertex shader
+                simple_shader.activate();
 
+                // == // Issue the necessary gl:: commands to draw your scene here
+                gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, ptr::null());
             }
 
             // Display the new color buffer on the display
