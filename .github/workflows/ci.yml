@@ -8,13 +8,14 @@ on:
     branches:
       - main
 
+defaults:
+  run:
+    working-directory: gloom-rs
+
 jobs:
   build-check:
     name: Build Check
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./gloom-rs
 
     steps:
       - uses: actions/checkout@v4
@@ -32,9 +33,6 @@ jobs:
   format-check:
     name: Format Check
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./gloom-rs
 
     steps:
       - uses: actions/checkout@v4
@@ -52,9 +50,6 @@ jobs:
   lint-check:
     name: Lint Check
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./gloom-rs
 
     steps:
       - uses: actions/checkout@v4
