@@ -13,8 +13,8 @@ edition = "2021" # rust edition
 [dependencies]
 glutin = "0.29.1"
 gl = "0.14.0"
-tobj = ">3.1.0"
-image = "0.24.3"
-nalgebra-glm = "0.17.0"
+tobj = "4.0.2"
+image = "0.25.2"
+nalgebra-glm = "0.19.0"
 rand = "0.8.4"
 libc = "0.2.132"
