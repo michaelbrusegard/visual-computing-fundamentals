@@ -8,7 +8,7 @@
 #![allow(unused_variables)]
 */
 extern crate nalgebra_glm as glm;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::{mem, os::raw::c_void, ptr};
 
 mod shader;
