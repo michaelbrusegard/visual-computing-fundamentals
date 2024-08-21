@@ -92,6 +92,13 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
     vao
 }
 
+fn fill_indices(vertices: &Vec<f32>) -> Vec<u32> {
+   let mut indices: Vec<u32> = Vec::new();
+   for i in 0..(vertices.len() / 3) {
+      indices.push(i as u32);
+   };
+   indices
+}
 
 fn main() {
    // Set up the necessary objects to deal with windows and event handling
@@ -221,13 +228,30 @@ fn main() {
 
             // Vertex coordinates no UV or RGB
             let vertices: Vec<f32> = vec![
-               1.0, -1.0, -1.0,
-               0.0, 1.0, 0.0,
-               -1.0, 0.0, 1.0
+               // X, Y, Z
+               -0.90, 0.05, 0.0,
+               -0.05, 0.90, 0.0,
+               -0.95, 0.95, 0.0,
+
+               -0.95, -0.95, 0.0,
+               -0.05, -0.90, 0.0,
+               -0.90, -0.05, 0.0,
+
+               0.05, 0.90, 0.0,
+               0.90, 0.05, 0.0,
+               0.95, 0.95, 0.0,
+
+               0.05, -0.90, 0.0,
+               0.95, -0.95, 0.0,
+               0.90, -0.05, 0.0,
+
+               -0.3, -0.3, 0.0,
+               0.3, -0.3, 0.0,
+               0.0, 0.3, 0.0
             ];
 
             // Orientation of coordinates, CC
-            let indices: Vec<u32> = vec![0, 1, 2];
+            let indices: Vec<u32> = fill_indices(&vertices);
 
             let my_vao = unsafe {
                create_vao(&vertices, &indices)
@@ -297,14 +321,17 @@ fn main() {
                gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
+               gl::Disable(gl::CULL_FACE);
+
                // == // Issue the necessary gl:: commands to draw your scene here
 
                // Binding the created VAO
+               // gl::PointSize(30.0);
                gl::BindVertexArray(my_vao);
                
                // Activate the shader and draw the elements
                simple_shader.activate();
-               gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, ptr::null());
+               gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
             }
 
             // Display the new color buffer on the display
