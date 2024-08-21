@@ -10,8 +10,8 @@
 extern crate nalgebra_glm as glm;
 use std::sync::{Arc, Mutex};
 use std::{
-   // mem,
-   // os::raw::c_void,
+   mem,
+   os::raw::c_void,
    ptr,
 };
 
@@ -35,48 +35,63 @@ const INITIAL_SCREEN_H: u32 = 600;
 
 // Get the size of an arbitrary array of numbers measured in bytes
 // Example usage:  byte_size_of_array(my_array)
-// fn byte_size_of_array<T>(val: &[T]) -> isize {
-//    std::mem::size_of_val(&val[..]) as isize
-// }
+fn byte_size_of_array<T>(val: &[T]) -> isize {
+   std::mem::size_of_val(&val[..]) as isize
+}
 
 // Get the OpenGL-compatible pointer to an arbitrary array of numbers
 // Example usage:  pointer_to_array(my_array)
-// fn pointer_to_array<T>(val: &[T]) -> *const c_void {
-//    &val[0] as *const T as *const c_void
-// }
+fn pointer_to_array<T>(val: &[T]) -> *const c_void {
+   &val[0] as *const T as *const c_void
+}
 
 // Get the size of the given type in bytes
 // Example usage:  size_of::<u64>()
-// fn size_of<T>() -> i32 {
-//    mem::size_of::<T>() as i32
-// }
+fn size_of<T>() -> i32 {
+   mem::size_of::<T>() as i32
+}
 
 // Get an offset in bytes for n units of type T, represented as a relative pointer
 // Example usage:  offset::<u64>(4)
-// fn offset<T>(n: u32) -> *const c_void {
-//    (n * mem::size_of::<T>() as u32) as *const T as *const c_void
-// }
+fn offset<T>(n: u32) -> *const c_void {
+   (n * mem::size_of::<T>() as u32) as *const T as *const c_void
+}
 
 // Get a null pointer (equivalent to an offset of 0)
 // ptr::null()
 
 // == // Generate your VAO here
-// unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
-//    // Implement me!
-//
-//    // Also, feel free to delete comments :)
-//
-//    // This should:
-//    // * Generate a VAO and bind it
-//    // * Generate a VBO and bind it
-//    // * Fill it with data
-//    // * Configure a VAP for the data and enable it
-//    // * Generate a IBO and bind it
-//    // * Fill it with data
-//    // * Return the ID of the VAO
-//
-//    0
-// }
+unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
+    // Generate a VAO and bind it
+    let mut vao: u32 = 0;
+    gl::GenVertexArrays(1, &mut vao);
+    gl::BindVertexArray(vao);
+
+    // Generate a VBO and bind it
+    let mut vbo: u32 = 0;
+    gl::GenBuffers(1, &mut vbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+
+    // Fill it with data
+    gl::BufferData(gl::ARRAY_BUFFER, byte_size_of_array(vertices), pointer_to_array(vertices), gl::STATIC_DRAW);
+
+    // Configure a VAP
+    let stride = 3 * size_of::<f32>() as i32;
+    gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, ptr::null());
+    gl::EnableVertexAttribArray(0);
+
+    // Generate a IBO and bind it
+    let mut ibo: u32 = 0;
+    gl::GenBuffers(1, &mut ibo);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+
+    // Fill the IBO with data
+    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, byte_size_of_array(indices), pointer_to_array(indices), gl::STATIC_DRAW);
+
+    // Return the id of the VAO
+    vao
+}
+
 
 fn main() {
    // Set up the necessary objects to deal with windows and event handling
