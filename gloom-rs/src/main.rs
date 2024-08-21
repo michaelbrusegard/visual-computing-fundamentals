@@ -1,12 +1,12 @@
 // Uncomment these following global attributes to silence most warnings of "low" interest:
-/*
+
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(unreachable_code)]
 #![allow(unused_mut)]
 #![allow(unused_unsafe)]
 #![allow(unused_variables)]
-*/
+
 extern crate nalgebra_glm as glm;
 use std::sync::{Arc, Mutex};
 use std::{
@@ -219,24 +219,29 @@ fn main() {
          Event::MainEventsCleared => {
             // == // Set up your VAO around here
 
-            // let my_vao = unsafe { 1337 };
+            // Vertex coordinates no UV or RGB
+            let vertices: Vec<f32> = vec![
+               1.0, -1.0, -1.0,
+               0.0, 1.0, 0.0,
+               -1.0, 0.0, 1.0
+            ];
+
+            // Orientation of coordinates, CC
+            let indices: Vec<u32> = vec![0, 1, 2];
+
+            let my_vao = unsafe {
+               create_vao(&vertices, &indices)
+            };
 
             // == // Set up your shaders here
 
-            // Basic usage of shader helper:
-            // The example code below creates a 'shader' object.
-            // It which contains the field `.program_id` and the method `.activate()`.
-            // The `.` in the path is relative to `Cargo.toml`.
-            // This snippet is not enough to do the exercise, and will need to be modified (outside
-            // of just using the correct path), but it only needs to be called once
-
-            /*
+            // Attaching the vertex and fragment shader to the shader builder
             let simple_shader = unsafe {
                 shader::ShaderBuilder::new()
-                    .attach_file("./path/to/simple/shader.file")
+                    .attach_file("./shaders/simple.vert")
+                    .attach_file("./shaders/simple.frag")
                     .link()
             };
-            */
 
             // Used to demonstrate keyboard handling for exercise 2.
             let mut _arbitrary_number = 0.0; // feel free to remove
@@ -293,6 +298,13 @@ fn main() {
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                // == // Issue the necessary gl:: commands to draw your scene here
+
+               // Binding the created VAO
+               gl::BindVertexArray(my_vao);
+               
+               // Activate the shader and draw the elements
+               simple_shader.activate();
+               gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, ptr::null());
             }
 
             // Display the new color buffer on the display

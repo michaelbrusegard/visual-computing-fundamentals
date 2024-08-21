@@ -1,22 +1,22 @@
 // Uncomment these following global attributes to silence most warnings of "low" interest:
-/*
+
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(unreachable_code)]
 #![allow(unused_mut)]
 #![allow(unused_unsafe)]
 #![allow(unused_variables)]
-*/
+
 extern crate nalgebra_glm as glm;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::{
-   // mem,
-   // os::raw::c_void,
+   mem,
+   os::raw::c_void,
    ptr,
 };
 
-// use gloom_rs::shader;
+use gloom_rs::shader;
 use gloom_rs::util;
 
 use glutin::event::{
@@ -36,48 +36,62 @@ const INITIAL_SCREEN_H: u32 = 600;
 
 // Get the size of an arbitrary array of numbers measured in bytes
 // Example usage:  byte_size_of_array(my_array)
-// fn byte_size_of_array<T>(val: &[T]) -> isize {
-//    std::mem::size_of_val(&val[..]) as isize
-// }
+fn byte_size_of_array<T>(val: &[T]) -> isize {
+   std::mem::size_of_val(&val[..]) as isize
+}
 
 // Get the OpenGL-compatible pointer to an arbitrary array of numbers
 // Example usage:  pointer_to_array(my_array)
-// fn pointer_to_array<T>(val: &[T]) -> *const c_void {
-//    &val[0] as *const T as *const c_void
-// }
+fn pointer_to_array<T>(val: &[T]) -> *const c_void {
+   &val[0] as *const T as *const c_void
+}
 
 // Get the size of the given type in bytes
 // Example usage:  size_of::<u64>()
-// fn size_of<T>() -> i32 {
-//    mem::size_of::<T>() as i32
-// }
+fn size_of<T>() -> i32 {
+   mem::size_of::<T>() as i32
+}
 
 // Get an offset in bytes for n units of type T, represented as a relative pointer
 // Example usage:  offset::<u64>(4)
-// fn offset<T>(n: u32) -> *const c_void {
-//    (n * mem::size_of::<T>() as u32) as *const T as *const c_void
-// }
+fn offset<T>(n: u32) -> *const c_void {
+   (n * mem::size_of::<T>() as u32) as *const T as *const c_void
+}
 
 // Get a null pointer (equivalent to an offset of 0)
 // ptr::null()
 
 // == // Generate your VAO here
-// unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
-//    // Implement me!
-//
-//    // Also, feel free to delete comments :)
-//
-//    // This should:
-//    // * Generate a VAO and bind it
-//    // * Generate a VBO and bind it
-//    // * Fill it with data
-//    // * Configure a VAP for the data and enable it
-//    // * Generate a IBO and bind it
-//    // * Fill it with data
-//    // * Return the ID of the VAO
-//
-//    0
-// }
+unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
+   // Generate a VAO and bind it
+   let mut vao: u32 = 0;
+   gl::GenVertexArrays(1, &mut vao);
+   gl::BindVertexArray(vao);
+
+   // Generate a VBO and bind it
+   let mut vbo: u32 = 0;
+   gl::GenBuffers(1, &mut vbo);
+   gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+
+   // Fill it with data
+   gl::BufferData(gl::ARRAY_BUFFER, byte_size_of_array(vertices), pointer_to_array(vertices), gl::STATIC_DRAW);
+
+   // Configure a VAP
+   let stride = 3 * size_of::<f32>() as i32;
+   gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, ptr::null());
+   gl::EnableVertexAttribArray(0);
+
+   // Generate a IBO and bind it
+   let mut ibo: u32 = 0;
+   gl::GenBuffers(1, &mut ibo);
+   gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+
+   // Fill the IBO with data
+   gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, byte_size_of_array(indices), pointer_to_array(indices), gl::STATIC_DRAW);
+
+   // Return the id of the VAO
+   vao
+}
 
 fn main() {
    // Set up the necessary objects to deal with windows and event handling
@@ -139,24 +153,29 @@ fn main() {
 
       // == // Set up your VAO around here
 
-      // let my_vao = unsafe { 1337 };
+      // Vertex coordinates no UV or RGB
+      let vertices: Vec<f32> = vec![
+         1.0, -1.0, -1.0,
+         0.0, 1.0, 0.0,
+         -1.0, 0.0, 1.0
+      ];
+
+      // Orientation of coordinates, CC
+      let indices: Vec<u32> = vec![0, 1, 2];
+
+      let my_vao = unsafe {
+         create_vao(&vertices, &indices)
+      };
 
       // == // Set up your shaders here
 
-      // Basic usage of shader helper:
-      // The example code below creates a 'shader' object.
-      // It which contains the field `.program_id` and the method `.activate()`.
-      // The `.` in the path is relative to `Cargo.toml`.
-      // This snippet is not enough to do the exercise, and will need to be modified (outside
-      // of just using the correct path), but it only needs to be called once
-
-      /*
+      // Attaching the vertex and fragment shader to the shader builder
       let simple_shader = unsafe {
           shader::ShaderBuilder::new()
-              .attach_file("./path/to/simple/shader.file")
+              .attach_file("./shaders/simple.vert")
+              .attach_file("./shaders/simple.frag")
               .link()
       };
-      */
 
       // Used to demonstrate keyboard handling for exercise 2.
       let mut _arbitrary_number = 0.0; // feel free to remove
@@ -218,6 +237,13 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             // == // Issue the necessary gl:: commands to draw your scene here
+
+            // Binding the created VAO
+            gl::BindVertexArray(my_vao);
+               
+            // Activate the shader and draw the elements
+            simple_shader.activate();
+            gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, ptr::null());
          }
 
          // Display the new color buffer on the display
