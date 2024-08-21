@@ -25,8 +25,10 @@ cargo run
 
 This will compile and run the project.
 
-If you want to run the project without rendering on a separate thread (so it works in MacOS), use the following command:
+If you want to run the project with rendering on a separate thread, use the following command:
 
 ```bash
-cargo run --bin macos
+cargo run --bin thread
 ```
+
+This will run the project with rendering on a separate thread.
