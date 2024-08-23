@@ -28,7 +28,7 @@ use glutin::event::{
 use glutin::event_loop::ControlFlow;
 
 // initial window size
-const INITIAL_SCREEN_W: u32 = 800;
+const INITIAL_SCREEN_W: u32 = 600;
 const INITIAL_SCREEN_H: u32 = 600;
 
 // == // Helper functions to make interacting with OpenGL a little bit prettier. You *WILL* need these! // == //
@@ -97,6 +97,47 @@ fn fill_indices(vertices: &Vec<f32>) -> Vec<u32> {
    for i in 0..(vertices.len() / 3) {
       indices.push(i as u32);
    };
+   indices
+}
+
+// Draw circle from the given location
+// * 'location' - the centre position of the circle.
+// * 'r' - the radius of the circle, minimum 0.01f.
+// * 'n' - amount of vertices to define the circle, minimum 3.
+fn circle_vertices(location: Vec<f32>, r: f32, n: u32) -> Vec<f32> {
+   if n < 3 || r < 0.01 {
+      // Return empty vertices
+      return vec![];
+   }
+   
+   // Calculate degrees between each verticy
+   let angle: f32 = (2.0 * std::f32::consts::PI) / n as f32;
+
+   // Calculate the x and y positions where same index belongs to eachother
+   let mut vertices: Vec<f32> = Vec::new();  
+
+   for i in 0..n {
+      let x: f32 = r * f32::cos(angle * i as f32) - location[0];
+      let y: f32 = r * f32::sin(angle * i as f32) - location[1];
+      vertices.push(x);
+      vertices.push(y);
+      vertices.push(0.0 + location[2]);
+   }
+
+   vertices
+}
+
+fn fill_circle_indices(vertices: &Vec<f32>) -> Vec<u32> {
+   let mut i: u32 = 1;
+   let mut indices: Vec<u32> = Vec::new();
+
+   while i < vertices.len() as u32 {
+      indices.push(0);
+      indices.push(i);
+      indices.push(i+1);
+      i += 1;
+   }
+
    indices
 }
 
@@ -227,31 +268,50 @@ fn main() {
             // == // Set up your VAO around here
 
             // Vertex coordinates no UV or RGB
+            // let vertices: Vec<f32> = circle_vertices(vec![0.0, 0.0, 0.0], 0.6, 16);
+
             let vertices: Vec<f32> = vec![
-               // X, Y, Z
-               -0.90, 0.05, 0.0,
-               -0.05, 0.90, 0.0,
-               -0.95, 0.95, 0.0,
+               -1.0, -1.0, 0.3,
+               1.0, 1.0, 0.0,
+               -1.0, 1.0, 0.4,
 
-               -0.95, -0.95, 0.0,
-               -0.05, -0.90, 0.0,
-               -0.90, -0.05, 0.0,
-
-               0.05, 0.90, 0.0,
-               0.90, 0.05, 0.0,
-               0.95, 0.95, 0.0,
-
-               0.05, -0.90, 0.0,
-               0.95, -0.95, 0.0,
-               0.90, -0.05, 0.0,
-
-               -0.3, -0.3, 0.0,
-               0.3, -0.3, 0.0,
-               0.0, 0.3, 0.0
+               -1.0, -1.0, 0.0,
+               1.0, -1.0, 0.0,
+               1.0, 1.0, 0.0
             ];
+
+            // let vertices: Vec<f32> = vec![
+            //    // X, Y, Z
+            //    // 0.6, -0.8, -1.2,
+            //    // 0.0, 0.4, 0.0,
+            //    // -0.8, -0.2, 1.2,
+
+            //    -0.90, 0.05, 0.0,
+            //    -0.05, 0.90, 0.0,
+            //    -0.95, 0.95, 0.0,
+
+            //    -0.95, -0.95, 0.0,
+            //    -0.05, -0.90, 0.0,
+            //    -0.90, -0.05, 0.0,
+
+            //    0.05, 0.90, 0.0,
+            //    0.90, 0.05, 0.0,
+            //    0.95, 0.95, 0.0,
+
+            //    0.05, -0.90, 0.0,
+            //    0.95, -0.95, 0.0,
+            //    0.90, -0.05, 0.0,
+
+            //    -0.3, -0.3, 0.0,
+            //    0.3, -0.3, 0.0,
+            //    0.0, 0.3, 0.0
+            // ];
 
             // Orientation of coordinates, CC
             let indices: Vec<u32> = fill_indices(&vertices);
+            
+            // Fan point indexes
+            // let indices: Vec<u32> = fill_circle_indices(&vertices); 
 
             let my_vao = unsafe {
                create_vao(&vertices, &indices)
@@ -321,12 +381,11 @@ fn main() {
                gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-               gl::Disable(gl::CULL_FACE);
+               // gl::Disable(gl::CULL_FACE);
 
                // == // Issue the necessary gl:: commands to draw your scene here
 
                // Binding the created VAO
-               // gl::PointSize(30.0);
                gl::BindVertexArray(my_vao);
                
                // Activate the shader and draw the elements
