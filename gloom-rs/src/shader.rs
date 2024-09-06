@@ -20,19 +20,33 @@ pub enum ShaderType {
 
 impl Shader {
    // Make sure the shader is active before calling this
+   /// Gets the location of a uniform variable in the shader program.
+   ///
+   /// # Safety
+   ///
+   /// This function is marked as unsafe because it directly interacts with OpenGL, which uses a state machine model.
+   /// The caller must ensure that the OpenGL context is correctly set up and that the shader program has been correctly linked and activated.
+   /// Failure to ensure these conditions can lead to undefined behavior.
    pub unsafe fn get_uniform_location(&self, name: &str) -> i32 {
       let name_cstr = CString::new(name).expect("CString::new failed");
       gl::GetUniformLocation(self.program_id, name_cstr.as_ptr())
    }
 
+   /// Activates the shader program.
+   ///
+   /// # Safety
+   ///
+   /// This function is marked as unsafe because it directly interacts with OpenGL, which uses a state machine model.
+   /// The caller must ensure that the OpenGL context is correctly set up and that the shader program has been correctly linked.
+   /// Failure to ensure these conditions can lead to undefined behavior.
    pub unsafe fn activate(&self) {
       gl::UseProgram(self.program_id);
    }
 }
 
-impl Into<gl::types::GLenum> for ShaderType {
-   fn into(self) -> gl::types::GLenum {
-      match self {
+impl From<ShaderType> for gl::types::GLenum {
+   fn from(val: ShaderType) -> Self {
+      match val {
          ShaderType::Vertex => gl::VERTEX_SHADER,
          ShaderType::Fragment => gl::FRAGMENT_SHADER,
          ShaderType::TessellationControl => gl::TESS_CONTROL_SHADER,
@@ -56,22 +70,43 @@ impl ShaderType {
 }
 
 impl ShaderBuilder {
+   /// Creates a new ShaderBuilder.
+   ///
+   /// # Safety
+   ///
+   /// This function is marked as unsafe because it directly interacts with OpenGL, which uses a state machine model.
+   /// The caller must ensure that the OpenGL context is correctly set up before calling this function.
+   /// Failure to ensure this condition can lead to undefined behavior.
    pub unsafe fn new() -> ShaderBuilder {
       ShaderBuilder { program_id: gl::CreateProgram(), shaders: vec![] }
    }
 
+   /// Attaches a shader from a file to the shader program.
+   ///
+   /// # Safety
+   ///
+   /// This function is marked as unsafe because it directly interacts with OpenGL, which uses a state machine model.
+   /// The caller must ensure that the OpenGL context is correctly set up and that the file at the provided path contains valid shader source code.
+   /// Failure to ensure these conditions can lead to undefined behavior.
    pub unsafe fn attach_file(self, shader_path: &str) -> ShaderBuilder {
       let path = Path::new(shader_path);
       if let Some(extension) = path.extension() {
          let shader_type = ShaderType::from_ext(extension).expect("Failed to parse file extension.");
-         let shader_src =
-            std::fs::read_to_string(path).expect(&format!("Failed to read shader source. {}", shader_path));
+         let shader_src = std::fs::read_to_string(path)
+            .unwrap_or_else(|_| panic!("Failed to read shader source. {}", shader_path));
          self.compile_shader(&shader_src, shader_type)
       } else {
          panic!("Failed to read extension of file with path: {}", shader_path);
       }
    }
 
+   /// Compiles a shader from the provided source code and shader type.
+   ///
+   /// # Safety
+   ///
+   /// This function is marked as unsafe because it directly interacts with OpenGL, which uses a state machine model.
+   /// The caller must ensure that the OpenGL context is correctly set up and that the shader source code is valid.
+   /// Failure to ensure these conditions can lead to undefined behavior.
    pub unsafe fn compile_shader(mut self, shader_src: &str, shader_type: ShaderType) -> ShaderBuilder {
       let shader = gl::CreateShader(shader_type.into());
       let c_str_shader = CString::new(shader_src.as_bytes()).unwrap();
@@ -89,8 +124,7 @@ impl ShaderBuilder {
 
    unsafe fn check_shader_errors(&self, shader_id: u32) -> bool {
       let mut success = i32::from(gl::FALSE);
-      let mut info_log = Vec::with_capacity(512);
-      info_log.set_len(512 - 1);
+      let mut info_log = vec![0; 512];
       gl::GetShaderiv(shader_id, gl::COMPILE_STATUS, &mut success);
       if success != i32::from(gl::TRUE) {
          gl::GetShaderInfoLog(
@@ -107,8 +141,7 @@ impl ShaderBuilder {
 
    unsafe fn check_linker_errors(&self) -> bool {
       let mut success = i32::from(gl::FALSE);
-      let mut info_log = Vec::with_capacity(512);
-      info_log.set_len(512 - 1);
+      let mut info_log = vec![0; 512];
       gl::GetProgramiv(self.program_id, gl::LINK_STATUS, &mut success);
       if success != i32::from(gl::TRUE) {
          gl::GetProgramInfoLog(
@@ -123,6 +156,13 @@ impl ShaderBuilder {
       true
    }
 
+   /// Links all the shaders together to create a shader program.
+   ///
+   /// # Safety
+   ///
+   /// This function is marked as unsafe because it directly interacts with OpenGL, which uses a state machine model.
+   /// The caller must ensure that the OpenGL context is correctly set up and that the shaders have been correctly compiled and attached.
+   /// Failure to ensure these conditions can lead to undefined behavior.
    #[must_use = "The shader program is useless if not stored in a variable."]
    pub unsafe fn link(self) -> Shader {
       for &shader in &self.shaders {
