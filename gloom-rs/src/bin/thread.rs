@@ -8,6 +8,7 @@
 #![allow(unused_variables)]
 
 extern crate nalgebra_glm as glm;
+use std::ffi::CString;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::{
@@ -101,6 +102,47 @@ fn fill_indices(vertices: &Vec<f32>) -> Vec<u32> {
    indices
 }
 
+// Draw circle from the given location
+// * 'location' - the centre position of the circle.
+// * 'r' - the radius of the circle, minimum 0.01f.
+// * 'n' - amount of vertices to define the circle, minimum 3.
+fn circle_vertices(location: Vec<f32>, r: f32, n: u32) -> Vec<f32> {
+   if n < 3 || r < 0.01 {
+      // Return empty vertices
+      return vec![];
+   }
+   
+   // Calculate degrees between each verticy
+   let angle: f32 = (2.0 * std::f32::consts::PI) / n as f32;
+
+   // Calculate the x and y positions where same index belongs to eachother
+   let mut vertices: Vec<f32> = Vec::new();  
+
+   for i in 0..n {
+      let x: f32 = r * f32::cos(angle * i as f32) - location[0];
+      let y: f32 = r * f32::sin(angle * i as f32) - location[1];
+      vertices.push(x);
+      vertices.push(y);
+      vertices.push(0.0 + location[2]);
+   }
+
+   vertices
+}
+
+fn fill_circle_indices(vertices: &Vec<f32>) -> Vec<u32> {
+   let mut i: u32 = 1;
+   let mut indices: Vec<u32> = Vec::new();
+
+   while i < vertices.len() as u32 {
+      indices.push(0);
+      indices.push(i);
+      indices.push(i+1);
+      i += 1;
+   }
+
+   indices
+}
+
 fn main() {
    // Set up the necessary objects to deal with windows and event handling
    let el = glutin::event_loop::EventLoop::new();
@@ -163,27 +205,39 @@ fn main() {
 
       // Vertex coordinates no UV or RGB
       let vertices: Vec<f32> = vec![
-         // X, Y, Z
-         -0.90, 0.05, 0.0,
-         -0.05, 0.90, 0.0,
-         -0.95, 0.95, 0.0,
+      //    // X, Y, Z
+      //    // 0.6, -0.8, -1.2,
+      //    // 0.0, 0.4, 0.0,
+      //    // -0.8, -0.2, 1.2,
 
-         -0.95, -0.95, 0.0,
-         -0.05, -0.90, 0.0,
-         -0.90, -0.05, 0.0,
+         // -0.90, 0.05, 0.0,
+         // -0.05, 0.90, 0.0,
+         // -0.95, 0.95, 0.0,
 
-         0.05, 0.90, 0.0,
-         0.90, 0.05, 0.0,
-         0.95, 0.95, 0.0,
+         // -0.95, -0.95, 0.0,
+         // -0.05, -0.90, 0.0,
+         // -0.90, -0.05, 0.0,
 
-         0.05, -0.90, 0.0,
-         0.95, -0.95, 0.0,
-         0.90, -0.05, 0.0,
+         // 0.05, 0.90, 0.0,
+         // 0.90, 0.05, 0.0,
+         // 0.95, 0.95, 0.0,
 
-         -0.3, -0.3, 0.0,
-         0.3, -0.3, 0.0,
-         0.0, 0.3, 0.0
+         // 0.05, -0.90, 0.0,
+         // 0.95, -0.95, 0.0,
+         // 0.90, -0.05, 0.0,
+
+         // -0.3, -0.3, 0.0,
+         // 0.3, -0.3, 0.0,
+         // 0.0, 0.3, 0.0
+
+         -1.0, -1.0, 0.0,
+         1.0, 1.0, 0.0,
+         -1.0, 1.0, 0.0,
+         1.0, -1.0, 0.0
       ];
+
+      // let indices: Vec<u32> = fill_indices(&vertices);
+      let indices: Vec<u32> = vec![0, 1, 2, 0, 3, 1];
 
       // Orientation of coordinates, CC
       let indices: Vec<u32> = fill_indices(&vertices);
@@ -201,6 +255,9 @@ fn main() {
               .attach_file("./shaders/simple.frag")
               .link()
       };
+
+      let name: CString = CString::new("time").unwrap();
+      let time_loc: i32 = unsafe {gl::GetUniformLocation(simple_shader.program_id, name.as_ptr())};
 
       // Used to demonstrate keyboard handling for exercise 2.
       let mut _arbitrary_number = 0.0; // feel free to remove
@@ -268,6 +325,7 @@ fn main() {
                
             // Activate the shader and draw the elements
             simple_shader.activate();
+            gl::Uniform1f(time_loc, delta_time);
             gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
          }
 

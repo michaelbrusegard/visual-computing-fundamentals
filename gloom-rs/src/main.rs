@@ -8,6 +8,7 @@
 #![allow(unused_variables)]
 
 extern crate nalgebra_glm as glm;
+use std::ffi::CString;
 use std::sync::{Arc, Mutex};
 use std::{
    mem,
@@ -210,7 +211,7 @@ fn main() {
 
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
-      *control_flow = ControlFlow::Wait;
+      *control_flow = ControlFlow::Poll;
 
       match event {
          Event::WindowEvent { event: WindowEvent::Resized(physical_size), .. } => {
@@ -265,53 +266,45 @@ fn main() {
             }
          }
          Event::MainEventsCleared => {
+            // Compute time passed since the previous frame and since the start of the program
+            let now = std::time::Instant::now();
+            let elapsed = now.duration_since(first_frame_time).as_secs_f32();
+            let delta_time = now.duration_since(previous_frame_time).as_secs_f32();
+            previous_frame_time = now;
+
             // == // Set up your VAO around here
 
             // Vertex coordinates no UV or RGB
-            // let vertices: Vec<f32> = circle_vertices(vec![0.0, 0.0, 0.0], 0.6, 16);
 
             let vertices: Vec<f32> = vec![
-               -1.0, -1.0, 0.3,
-               1.0, 1.0, 0.0,
-               -1.0, 1.0, 0.4,
-
-               -1.0, -1.0, 0.0,
-               1.0, -1.0, 0.0,
-               1.0, 1.0, 0.0
-            ];
-
-            // let vertices: Vec<f32> = vec![
             //    // X, Y, Z
             //    // 0.6, -0.8, -1.2,
             //    // 0.0, 0.4, 0.0,
             //    // -0.8, -0.2, 1.2,
 
-            //    -0.90, 0.05, 0.0,
-            //    -0.05, 0.90, 0.0,
-            //    -0.95, 0.95, 0.0,
+               -0.90, 0.05, 0.0,
+               -0.05, 0.90, 0.0,
+               -0.95, 0.95, 0.0,
 
-            //    -0.95, -0.95, 0.0,
-            //    -0.05, -0.90, 0.0,
-            //    -0.90, -0.05, 0.0,
+               -0.95, -0.95, 0.0,
+               -0.05, -0.90, 0.0,
+               -0.90, -0.05, 0.0,
 
-            //    0.05, 0.90, 0.0,
-            //    0.90, 0.05, 0.0,
-            //    0.95, 0.95, 0.0,
+               0.05, 0.90, 0.0,
+               0.90, 0.05, 0.0,
+               0.95, 0.95, 0.0,
 
-            //    0.05, -0.90, 0.0,
-            //    0.95, -0.95, 0.0,
-            //    0.90, -0.05, 0.0,
+               0.05, -0.90, 0.0,
+               0.95, -0.95, 0.0,
+               0.90, -0.05, 0.0,
 
-            //    -0.3, -0.3, 0.0,
-            //    0.3, -0.3, 0.0,
-            //    0.0, 0.3, 0.0
-            // ];
+               -0.3, -0.3, 0.0,
+               0.3, -0.3, 0.0,
+               0.0, 0.3, 0.0
+            ];
 
-            // Orientation of coordinates, CC
+            // let indices: Vec<u32> = fill_indices(&vertices);
             let indices: Vec<u32> = fill_indices(&vertices);
-            
-            // Fan point indexes
-            // let indices: Vec<u32> = fill_circle_indices(&vertices); 
 
             let my_vao = unsafe {
                create_vao(&vertices, &indices)
@@ -327,14 +320,11 @@ fn main() {
                     .link()
             };
 
+            let name: CString = CString::new("time").unwrap();
+            let time_loc: i32 = unsafe {gl::GetUniformLocation(simple_shader.program_id, name.as_ptr())};
+
             // Used to demonstrate keyboard handling for exercise 2.
             let mut _arbitrary_number = 0.0; // feel free to remove
-
-            // Compute time passed since the previous frame and since the start of the program
-            let now = std::time::Instant::now();
-            // let elapsed = now.duration_since(first_frame_time).as_secs_f32();
-            let delta_time = now.duration_since(previous_frame_time).as_secs_f32();
-            previous_frame_time = now;
 
             if let Ok(mut new_size) = arc_window_size.lock() {
                if new_size.2 {
@@ -381,8 +371,6 @@ fn main() {
                gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-               // gl::Disable(gl::CULL_FACE);
-
                // == // Issue the necessary gl:: commands to draw your scene here
 
                // Binding the created VAO
@@ -390,6 +378,7 @@ fn main() {
                
                // Activate the shader and draw the elements
                simple_shader.activate();
+               unsafe {gl::Uniform1f(time_loc, elapsed)};
                gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
             }
 
