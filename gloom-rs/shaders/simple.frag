@@ -63,7 +63,7 @@ float sdTriangle(vec2 p1, vec2 p2, vec2 p3, vec2 p)
     vec2 d = min(min(vec2(dot(pq0, pq0), s*(f0.x*e0.y - f0.y*e0.x)),
                      vec2(dot(pq1, pq1), s*(f1.x*e1.y - f1.y*e1.x))),
                      vec2(dot(pq2, pq2), s*(f2.x*e2.y - f2.y*e2.x)));
-    
+
     return -sqrt(d.x)*sign(d.y);
 }
 

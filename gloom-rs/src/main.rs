@@ -10,11 +10,7 @@
 extern crate nalgebra_glm as glm;
 use std::ffi::CString;
 use std::sync::{Arc, Mutex};
-use std::{
-   mem,
-   os::raw::c_void,
-   ptr,
-};
+use std::{mem, os::raw::c_void, ptr};
 
 mod shader;
 mod util;
@@ -63,41 +59,51 @@ fn offset<T>(n: u32) -> *const c_void {
 
 // == // Generate your VAO here
 unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
-    // Generate a VAO and bind it
-    let mut vao: u32 = 0;
-    gl::GenVertexArrays(1, &mut vao);
-    gl::BindVertexArray(vao);
+   // Generate a VAO and bind it
+   let mut vao: u32 = 0;
+   gl::GenVertexArrays(1, &mut vao);
+   gl::BindVertexArray(vao);
 
-    // Generate a VBO and bind it
-    let mut vbo: u32 = 0;
-    gl::GenBuffers(1, &mut vbo);
-    gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+   // Generate a VBO and bind it
+   let mut vbo: u32 = 0;
+   gl::GenBuffers(1, &mut vbo);
+   gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
-    // Fill it with data
-    gl::BufferData(gl::ARRAY_BUFFER, byte_size_of_array(vertices), pointer_to_array(vertices), gl::STATIC_DRAW);
+   // Fill it with data
+   gl::BufferData(
+      gl::ARRAY_BUFFER,
+      byte_size_of_array(vertices),
+      pointer_to_array(vertices),
+      gl::STATIC_DRAW,
+   );
 
-    // Configure a VAP
-    let stride = 3 * size_of::<f32>() as i32;
-    gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, ptr::null());
-    gl::EnableVertexAttribArray(0);
+   // Configure a VAP
+   let stride = 3 * size_of::<f32>() as i32;
+   gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, ptr::null());
+   gl::EnableVertexAttribArray(0);
 
-    // Generate a IBO and bind it
-    let mut ibo: u32 = 0;
-    gl::GenBuffers(1, &mut ibo);
-    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+   // Generate a IBO and bind it
+   let mut ibo: u32 = 0;
+   gl::GenBuffers(1, &mut ibo);
+   gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
 
-    // Fill the IBO with data
-    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, byte_size_of_array(indices), pointer_to_array(indices), gl::STATIC_DRAW);
+   // Fill the IBO with data
+   gl::BufferData(
+      gl::ELEMENT_ARRAY_BUFFER,
+      byte_size_of_array(indices),
+      pointer_to_array(indices),
+      gl::STATIC_DRAW,
+   );
 
-    // Return the id of the VAO
-    vao
+   // Return the id of the VAO
+   vao
 }
 
 fn fill_indices(vertices: &Vec<f32>) -> Vec<u32> {
    let mut indices: Vec<u32> = Vec::new();
    for i in 0..(vertices.len() / 3) {
       indices.push(i as u32);
-   };
+   }
    indices
 }
 
@@ -110,12 +116,12 @@ fn circle_vertices(location: Vec<f32>, r: f32, n: u32) -> Vec<f32> {
       // Return empty vertices
       return vec![];
    }
-   
+
    // Calculate degrees between each verticy
    let angle: f32 = (2.0 * std::f32::consts::PI) / n as f32;
 
    // Calculate the x and y positions where same index belongs to eachother
-   let mut vertices: Vec<f32> = Vec::new();  
+   let mut vertices: Vec<f32> = Vec::new();
 
    for i in 0..n {
       let x: f32 = r * f32::cos(angle * i as f32) - location[0];
@@ -135,7 +141,7 @@ fn fill_circle_indices(vertices: &Vec<f32>) -> Vec<u32> {
    while i < vertices.len() as u32 {
       indices.push(0);
       indices.push(i);
-      indices.push(i+1);
+      indices.push(i + 1);
       i += 1;
    }
 
@@ -277,51 +283,32 @@ fn main() {
             // Vertex coordinates no UV or RGB
 
             let vertices: Vec<f32> = vec![
-            //    // X, Y, Z
-            //    // 0.6, -0.8, -1.2,
-            //    // 0.0, 0.4, 0.0,
-            //    // -0.8, -0.2, 1.2,
-
-               -0.90, 0.05, 0.0,
-               -0.05, 0.90, 0.0,
-               -0.95, 0.95, 0.0,
-
-               -0.95, -0.95, 0.0,
-               -0.05, -0.90, 0.0,
-               -0.90, -0.05, 0.0,
-
-               0.05, 0.90, 0.0,
-               0.90, 0.05, 0.0,
-               0.95, 0.95, 0.0,
-
-               0.05, -0.90, 0.0,
-               0.95, -0.95, 0.0,
-               0.90, -0.05, 0.0,
-
-               -0.3, -0.3, 0.0,
-               0.3, -0.3, 0.0,
-               0.0, 0.3, 0.0
+               //    // X, Y, Z
+               //    // 0.6, -0.8, -1.2,
+               //    // 0.0, 0.4, 0.0,
+               //    // -0.8, -0.2, 1.2,
+               -0.90, 0.05, 0.0, -0.05, 0.90, 0.0, -0.95, 0.95, 0.0, -0.95, -0.95, 0.0, -0.05, -0.90, 0.0,
+               -0.90, -0.05, 0.0, 0.05, 0.90, 0.0, 0.90, 0.05, 0.0, 0.95, 0.95, 0.0, 0.05, -0.90, 0.0, 0.95,
+               -0.95, 0.0, 0.90, -0.05, 0.0, -0.3, -0.3, 0.0, 0.3, -0.3, 0.0, 0.0, 0.3, 0.0,
             ];
 
             // let indices: Vec<u32> = fill_indices(&vertices);
             let indices: Vec<u32> = fill_indices(&vertices);
 
-            let my_vao = unsafe {
-               create_vao(&vertices, &indices)
-            };
+            let my_vao = unsafe { create_vao(&vertices, &indices) };
 
             // == // Set up your shaders here
 
             // Attaching the vertex and fragment shader to the shader builder
             let simple_shader = unsafe {
-                shader::ShaderBuilder::new()
-                    .attach_file("./shaders/simple.vert")
-                    .attach_file("./shaders/simple.frag")
-                    .link()
+               shader::ShaderBuilder::new()
+                  .attach_file("./shaders/simple.vert")
+                  .attach_file("./shaders/simple.frag")
+                  .link()
             };
 
             let name: CString = CString::new("time").unwrap();
-            let time_loc: i32 = unsafe {gl::GetUniformLocation(simple_shader.program_id, name.as_ptr())};
+            let time_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, name.as_ptr()) };
 
             // Used to demonstrate keyboard handling for exercise 2.
             let mut _arbitrary_number = 0.0; // feel free to remove
@@ -375,10 +362,10 @@ fn main() {
 
                // Binding the created VAO
                gl::BindVertexArray(my_vao);
-               
+
                // Activate the shader and draw the elements
                simple_shader.activate();
-               unsafe {gl::Uniform1f(time_loc, elapsed)};
+               unsafe { gl::Uniform1f(time_loc, elapsed) };
                gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
             }
 
