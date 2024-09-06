@@ -34,7 +34,7 @@ const INITIAL_SCREEN_H: u32 = 600;
 // Get the size of an arbitrary array of numbers measured in bytes
 // Example usage:  byte_size_of_array(my_array)
 fn byte_size_of_array<T>(val: &[T]) -> isize {
-   std::mem::size_of_val(&val[..]) as isize
+   std::mem::size_of_val(val) as isize
 }
 
 // Get the OpenGL-compatible pointer to an arbitrary array of numbers
@@ -59,7 +59,7 @@ fn offset<T>(n: u32) -> *const c_void {
 // ptr::null()
 
 // == // Generate your VAO here
-unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
+unsafe fn create_vao(vertices: &[f32], indices: &[u32]) -> u32 {
    // Generate a VAO and bind it
    let mut vao: u32 = 0;
    gl::GenVertexArrays(1, &mut vao);
@@ -79,7 +79,7 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
    );
 
    // Configure a VAP
-   let stride = 3 * size_of::<f32>() as i32;
+   let stride = 3 * size_of::<f32>();
    gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, ptr::null());
    gl::EnableVertexAttribArray(0);
 
@@ -100,7 +100,7 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
    vao
 }
 
-fn fill_indices(vertices: &Vec<f32>) -> Vec<u32> {
+fn fill_indices(vertices: &[f32]) -> Vec<u32> {
    let mut indices: Vec<u32> = Vec::new();
    for i in 0..(vertices.len() / 3) {
       indices.push(i as u32);
@@ -135,7 +135,7 @@ fn circle_vertices(location: Vec<f32>, r: f32, n: u32) -> Vec<f32> {
    vertices
 }
 
-fn fill_circle_indices(vertices: &Vec<f32>) -> Vec<u32> {
+fn fill_circle_indices(vertices: &[f32]) -> Vec<u32> {
    let mut i: u32 = 1;
    let mut indices: Vec<u32> = Vec::new();
 
