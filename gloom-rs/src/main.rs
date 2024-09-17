@@ -58,16 +58,16 @@ fn offset<T>(n: u32) -> *const c_void {
 // ptr::null()
 
 // == // Generate your VAO here
-unsafe fn create_vao(vertices: &[f32], indices: &[u32]) -> u32 {
+unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32]) -> u32 {
    // Generate a VAO and bind it
    let mut vao: u32 = 0;
    gl::GenVertexArrays(1, &mut vao);
    gl::BindVertexArray(vao);
 
-   // Generate a VBO and bind it
-   let mut vbo: u32 = 0;
-   gl::GenBuffers(1, &mut vbo);
-   gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+   // Generate a verticy VBO and bind it
+   let mut verticy_vbo: u32 = 0;
+   gl::GenBuffers(1, &mut verticy_vbo);
+   gl::BindBuffer(gl::ARRAY_BUFFER, verticy_vbo);
 
    // Fill it with data
    gl::BufferData(
@@ -77,10 +77,27 @@ unsafe fn create_vao(vertices: &[f32], indices: &[u32]) -> u32 {
       gl::STATIC_DRAW,
    );
 
-   // Configure a VAP
-   let stride = 3 * size_of::<f32>();
-   gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, ptr::null());
+   // Configure a VAP for the vertices
+   let vertex_stride: i32 = 3 * size_of::<f32>();
+   gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, vertex_stride, ptr::null());
    gl::EnableVertexAttribArray(0);
+
+   // Generate a color VBO and bind it
+   let mut color_vbo: u32 = 0;
+   gl::GenBuffers(1, &mut color_vbo);
+   gl::BindBuffer(gl::ARRAY_BUFFER, color_vbo);
+
+   // Fill it with data
+   gl::BufferData(
+      gl::ARRAY_BUFFER,
+      byte_size_of_array(colors),
+      pointer_to_array(colors),
+      gl::STATIC_DRAW,
+   );
+
+   let color_stride: i32 = 4 * size_of::<f32>();
+   gl::VertexAttribPointer(1, 4, gl::FLOAT, gl::FALSE, color_stride, ptr::null());
+   gl::EnableVertexAttribArray(1);
 
    // Generate a IBO and bind it
    let mut ibo: u32 = 0;
@@ -283,19 +300,58 @@ fn main() {
             // Vertex coordinates no UV or RGB
 
             let vertices: Vec<f32> = vec![
-               //    // X, Y, Z
-               //    // 0.6, -0.8, -1.2,
-               //    // 0.0, 0.4, 0.0,
-               //    // -0.8, -0.2, 1.2,
-               -0.90, 0.05, 0.0, -0.05, 0.90, 0.0, -0.95, 0.95, 0.0, -0.95, -0.95, 0.0, -0.05, -0.90, 0.0,
-               -0.90, -0.05, 0.0, 0.05, 0.90, 0.0, 0.90, 0.05, 0.0, 0.95, 0.95, 0.0, 0.05, -0.90, 0.0, 0.95,
-               -0.95, 0.0, 0.90, -0.05, 0.0, -0.3, -0.3, 0.0, 0.3, -0.3, 0.0, 0.0, 0.3, 0.0,
+               // X, Y, Z
+               -0.90, 0.05, 0.0, 
+               -0.05, 0.90, 0.0, 
+               -0.95, 0.95, 0.0, 
+
+               -0.95, -0.95, 0.0, 
+               -0.05, -0.90, 0.0,
+               -0.90, -0.05, 0.0,
+
+               0.05, 0.90, 0.0, 
+               0.90, 0.05, 0.0, 
+               0.95, 0.95, 0.0, 
+
+               0.05, -0.90, 0.0, 
+               0.95, -0.95, 0.0, 
+               0.90, -0.05, 0.0, 
+
+               -0.3, -0.3, 0.0, 
+               0.3, -0.3, 0.0, 
+               0.0, 0.3, 0.0,
             ];
 
-            // let indices: Vec<u32> = fill_indices(&vertices);
             let indices: Vec<u32> = fill_indices(&vertices);
 
-            let my_vao = unsafe { create_vao(&vertices, &indices) };
+            let colors: Vec<f32> = vec![
+               // R, G, B, A
+               0.1, 0.2, 0.3, 1.0,
+               0.4, 0.5, 0.6, 1.0,
+               0.7, 0.8, 0.9, 1.0,
+
+               0.9, 0.1, 0.8, 1.0,
+               0.2, 0.7, 0.3, 1.0,
+               0.6, 0.4, 0.5, 1.0,
+
+               0.9, 0.7, 0.8, 1.0,
+               0.6, 0.5, 0.4, 1.0,
+               0.3, 0.2, 0.1, 1.0,
+
+               0.1, 0.2, 0.9, 1.0,
+               0.8, 0.3, 0.4, 1.0,
+               0.7, 0.6, 0.5, 1.0,
+
+               0.1, 0.2, 0.3, 1.0,
+               0.9, 0.8, 0.7, 1.0,
+               0.4, 0.5, 0.6, 1.0,
+
+               0.3, 0.3, 0.9, 1.0,
+               0.6, 0.6, 0.9, 1.0,
+               0.9, 0.9, 0.1, 1.0 
+            ];
+
+            let my_vao = unsafe { create_vao(&vertices, &indices, &colors) };
 
             // == // Set up your shaders here
 

@@ -5,6 +5,7 @@
 uniform float time;
 
 out vec4 color;
+in vec4 vertColor;
 
 vec4 pastel_night_sky = vec4(0.305, 0.454, 0.494, 1.0);
 vec4 moon_white = vec4(0.94, 0.917, 0.66, 1.0);
@@ -145,5 +146,5 @@ void main()
     }
 
     // Default color
-    // color = vec4(1.0, 1.0, 1.0, 1.0);
+    color = vertColor;
 }
