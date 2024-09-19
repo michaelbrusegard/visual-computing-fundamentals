@@ -232,9 +232,9 @@ fn main() {
    // == // From here on down there are only internals.
    // == //
 
-   let mut cam_angle_x: f32 = 0.0;
-   let mut cam_angle_y: f32 = 0.0;
-   let mut cam_angle_z: f32 = 0.0;
+   let mut cam_pos: Vec<f32> = vec![0.0, 0.0, -5.0];
+   let mut yaw: f32 = 0.0;
+   let mut pitch: f32 = 0.0;
 
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
@@ -278,9 +278,6 @@ fn main() {
             // Handle Escape and Q keys separately
             match keycode {
                Escape => {
-                  *control_flow = ControlFlow::Exit;
-               }
-               Q => {
                   *control_flow = ControlFlow::Exit;
                }
                _ => {}
@@ -341,16 +338,16 @@ fn main() {
 
                // Task 3
                // Front
-               -0.4, 0.4, -0.2, // Top left
-               -0.4, -0.4, -0.2, // Bottom left
-               0.4, -0.4, -0.2, // Bottom right
-               0.4, 0.4, -0.2, // Top right
+               -0.4, 0.4, 0.4, // Top left
+               -0.4, -0.4, 0.4, // Bottom left
+               0.4, -0.4, 0.4, // Bottom right
+               0.4, 0.4, 0.4, // Top right
 
                // Back
-               -0.4, 0.4, -1.0, // Top left
-               -0.4, -0.4, -1.0, // Bottom Left
-               0.4, -0.4, -1.0, // Bottom right
-               0.4, 0.4, -1.0, // Top right
+               -0.4, 0.4, -0.4, // Top left
+               -0.4, -0.4, -0.4, // Bottom Left
+               0.4, -0.4, -0.4, // Bottom right
+               0.4, 0.4, -0.4, // Top right
             ];
 
             let colors: Vec<f32> = vec![
@@ -445,22 +442,30 @@ fn main() {
                      // The `VirtualKeyCode` enum is defined here:
                      //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
                      VirtualKeyCode::W => {
-                        cam_angle_x += delta_time;
-                        // cam_angle_x = cam_angle_x.to_radians();
+                        cam_pos[2] += 0.01;
                      }
                      VirtualKeyCode::A => {
-                        cam_angle_y += delta_time;
-                        // cam_angle_y = cam_angle_y.to_radians();
+                        yaw += 1.0;
                      }
                      VirtualKeyCode::S => {
-                        cam_angle_x -= delta_time;
-                        // cam_angle_x = cam_angle_x.to_radians();
+                        cam_pos[2] -= 0.01;
                      }
                      VirtualKeyCode::D => {
-                        cam_angle_y -= delta_time;
-                        // cam_angle_y = cam_angle_y.to_radians();
+                        yaw -= 1.0;
                      }
-
+                     VirtualKeyCode::Space => {
+                        cam_pos[1] -= 0.01;
+                     }
+                     VirtualKeyCode::LShift => {
+                        cam_pos[1] += 0.01;
+                     }
+                     VirtualKeyCode::Q => {
+                        pitch += 0.5;
+                     }
+                     VirtualKeyCode::E => {
+                        pitch -= 0.5;
+                     }
+ 
                      // default handler:
                      _ => {}
                   }
@@ -484,56 +489,50 @@ fn main() {
             let trans_mat: glm::Mat4 = glm::mat4(
                1.0, 0.0, 0.0, 0.0, // First column
                0.0, 1.0, 0.0, 0.0, // Second column
-               0.0, 0.0, 1.0, 0.0, // Third column
+               0.0, 0.0, 1.0, -4.0, // Third column
                0.0, 0.0, 0.0, 1.0, // Fourth column
             );
 
-            let cos_x: f32 = cam_angle_x.cos();
-            let sin_x: f32 = cam_angle_x.sin();
+            // let rot_x_mat: glm::Mat4 = glm::mat4(
+            //    1.0, 0.0, 0.0, 0.0,
+            //    0.0, cos_x, -sin_x, 0.0,
+            //    0.0, sin_x, cos_x, 0.0,
+            //    0.0, 0.0, 0.0, 1.0,
+            // );
 
-            let cos_y: f32 = cam_angle_y.cos();
-            let sin_y: f32 = cam_angle_y.sin();
+            // let rot_y_mat: glm::Mat4 = glm::mat4(
+            //    cos_y, 0.0, sin_y, 0.0,
+            //    0.0, 1.0, 0.0, 0.0,
+            //    -sin_y, 0.0, cos_y, 0.0,
+            //    0.0, 0.0, 0.0, 1.0,
+            // );
 
-            let cos_z: f32 = cam_angle_z.cos();
-            let sin_z: f32 = cam_angle_z.sin();
-
-            let rot_x_mat: glm::Mat4 = glm::mat4(
-               1.0, 0.0, 0.0, 0.0,
-               0.0, cos_x, -sin_x, 0.0,
-               0.0, sin_x, cos_x, 0.0,
-               0.0, 0.0, 0.0, 1.0,
-            );
-
-            let rot_y_mat: glm::Mat4 = glm::mat4(
-               cos_y, 0.0, sin_y, 0.0,
-               0.0, 1.0, 0.0, 0.0,
-               -sin_y, 0.0, cos_y, 0.0,
-               0.0, 0.0, 0.0, 1.0,
-            );
-
-            let rot_z_mat: glm::Mat4 = glm::mat4(
-               cos_x, -sin_x, 0.0, 0.0,
-               sin_x, cos_x, 0.0, 0.0,
-               0.0, 0.0, 1.0, 0.0,
-               0.0, 0.0, 0.0, 1.0,
-            );
+            // let rot_z_mat: glm::Mat4 = glm::mat4(
+            //    cos_x, -sin_x, 0.0, 0.0,
+            //    sin_x, cos_x, 0.0, 0.0,
+            //    0.0, 0.0, 1.0, 0.0,
+            //    0.0, 0.0, 0.0, 1.0,
+            // );
 
             let trans_mat: glm::Mat4 = glm::mat4(
-               1.0, 0.0, 0.0, 0.0,
-               0.0, 1.0, 0.0, 0.0,
-               0.0, 0.0, 1.0, -2.5,
+               1.0, 0.0, 0.0, cam_pos[0],
+               0.0, 1.0, 0.0, cam_pos[1],
+               0.0, 0.0, 1.0, cam_pos[2],
                0.0, 0.0, 0.0, 1.0,
             );
 
             let proj_mat: glm::Mat4 = glm::perspective(
                INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32,
-               120.0_f32.to_radians(), 
+               60.0_f32.to_radians(), 
                1.0, 
                100.0,
             );
 
+            let rotation_x: glm::Mat4 = glm::rotation(pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
+            let rotation_y: glm::Mat4 = glm::rotation(yaw.to_radians(), &glm::vec3(0.0, 1.0, 0.0));
 
-            let combined_mat: glm::Mat4 = proj_mat * trans_mat * rot_z_mat * rot_y_mat * rot_x_mat * id_mat;
+
+            let combined_mat: glm::Mat4 = proj_mat * trans_mat * rotation_x * rotation_y * id_mat;
 
             unsafe {
                // Clear the color and depth buffers
