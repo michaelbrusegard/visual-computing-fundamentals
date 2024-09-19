@@ -232,6 +232,10 @@ fn main() {
    // == // From here on down there are only internals.
    // == //
 
+   let mut cam_angle_x: f32 = 0.0;
+   let mut cam_angle_y: f32 = 0.0;
+   let mut cam_angle_z: f32 = 0.0;
+
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
       *control_flow = ControlFlow::Poll;
@@ -301,54 +305,104 @@ fn main() {
 
             let vertices: Vec<f32> = vec![
                // X, Y, Z
-               -0.90, 0.05, 0.0, 
-               -0.05, 0.90, 0.0, 
-               -0.95, 0.95, 0.0, 
+               // 
+               // -0.90, 0.05, 0.0, 
+               // -0.05, 0.90, 0.0, 
+               // -0.95, 0.95, 0.0, 
 
-               -0.95, -0.95, 0.0, 
-               -0.05, -0.90, 0.0,
-               -0.90, -0.05, 0.0,
+               // -0.95, -0.95, 0.0, 
+               // -0.05, -0.90, 0.0,
+               // -0.90, -0.05, 0.0,
 
-               0.05, 0.90, 0.0, 
-               0.90, 0.05, 0.0, 
-               0.95, 0.95, 0.0, 
+               // 0.05, 0.90, 0.0, 
+               // 0.90, 0.05, 0.0, 
+               // 0.95, 0.95, 0.0, 
 
-               0.05, -0.90, 0.0, 
-               0.95, -0.95, 0.0, 
-               0.90, -0.05, 0.0, 
+               // 0.05, -0.90, 0.0, 
+               // 0.95, -0.95, 0.0, 
+               // 0.90, -0.05, 0.0, 
 
-               -0.3, -0.3, 0.0, 
-               0.3, -0.3, 0.0, 
-               0.0, 0.3, 0.0,
+               // -0.3, -0.3, 0.0, 
+               // 0.3, -0.3, 0.0, 
+               // 0.0, 0.3, 0.0,
+
+               // // Task 2
+               // -0.8, 0.8, -0.9,
+               // -0.9, 0.0, -0.9,
+               // 0.4, -0.2, -0.9,
+
+               // 0.8, 0.8, -0.5,
+               // -0.4, -0.2, -0.5,
+               // 0.9, 0.0, -0.5,
+
+               // -0.4, -0.8, -0.1,
+               // 0.4, -0.8, -0.1,
+               // 0.0, 0.4, -0.1
+
+               // Task 3
+               // Front
+               -0.4, 0.4, -0.2, // Top left
+               -0.4, -0.4, -0.2, // Bottom left
+               0.4, -0.4, -0.2, // Bottom right
+               0.4, 0.4, -0.2, // Top right
+
+               // Back
+               -0.4, 0.4, -1.0, // Top left
+               -0.4, -0.4, -1.0, // Bottom Left
+               0.4, -0.4, -1.0, // Bottom right
+               0.4, 0.4, -1.0, // Top right
             ];
-
-            let indices: Vec<u32> = fill_indices(&vertices);
 
             let colors: Vec<f32> = vec![
                // R, G, B, A
-               0.1, 0.2, 0.3, 1.0,
-               0.4, 0.5, 0.6, 1.0,
-               0.7, 0.8, 0.9, 1.0,
+               // Colors for Task 1
+               // 0.1, 0.2, 0.3, 1.0,
+               // 0.4, 0.5, 0.6, 1.0,
+               // 0.7, 0.8, 0.9, 1.0,
 
-               0.9, 0.1, 0.8, 1.0,
-               0.2, 0.7, 0.3, 1.0,
-               0.6, 0.4, 0.5, 1.0,
+               // 0.9, 0.1, 0.8, 1.0,
+               // 0.2, 0.7, 0.3, 1.0,
+               // 0.6, 0.4, 0.5, 1.0,
 
-               0.9, 0.7, 0.8, 1.0,
-               0.6, 0.5, 0.4, 1.0,
-               0.3, 0.2, 0.1, 1.0,
+               // 0.9, 0.7, 0.8, 1.0,
+               // 0.6, 0.5, 0.4, 1.0,
+               // 0.3, 0.2, 0.1, 1.0,
 
-               0.1, 0.2, 0.9, 1.0,
-               0.8, 0.3, 0.4, 1.0,
-               0.7, 0.6, 0.5, 1.0,
+               // // Task 2
+               // // 1
+               // 0.1, 0.2, 0.9, 0.6,
+               // 0.1, 0.2, 0.9, 0.6,
+               // 0.1, 0.2, 0.9, 0.6,
 
-               0.1, 0.2, 0.3, 1.0,
-               0.9, 0.8, 0.7, 1.0,
-               0.4, 0.5, 0.6, 1.0,
+               // // 2
+               // 0.9, 0.3, 0.4, 0.4,
+               // 0.9, 0.3, 0.4, 0.4,
+               // 0.9, 0.3, 0.4, 0.4,
 
-               0.3, 0.3, 0.9, 1.0,
-               0.6, 0.6, 0.9, 1.0,
-               0.9, 0.9, 0.1, 1.0 
+               // // 3
+               // 0.2, 0.6, 0.3, 0.5,
+               // 0.2, 0.6, 0.3, 0.5,
+               // 0.2, 0.6, 0.3, 0.5,
+
+               // Task 3
+               0.9, 0.2, 0.9, 1.0,
+               0.4, 0.9, 0.4, 1.0,
+               0.9, 0.9, 0.2, 1.0,
+               0.4, 0.9, 0.9, 1.0,
+
+               0.3, 0.4, 0.6, 1.0,
+               0.4, 0.9, 0.5, 1.0,
+               0.2, 0.9, 0.2, 1.0,
+               0.8, 0.9, 0.2, 1.0
+            ];
+
+            let indices: Vec<u32> = vec![
+               0, 1, 2, 3, 0, 2, // Front
+               0, 4, 1, 4, 5, 1, // Left
+               3, 2, 6, 6, 7, 3, // Right
+               6, 5, 4, 6, 4, 7, // Back
+               0, 7, 4, 0, 3, 7, // Top
+               6, 1, 5, 6, 2, 1, // Bottom
             ];
 
             let my_vao = unsafe { create_vao(&vertices, &indices, &colors) };
@@ -366,8 +420,11 @@ fn main() {
             let name: CString = CString::new("time").unwrap();
             let time_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, name.as_ptr()) };
 
-            // Used to demonstrate keyboard handling for exercise 2.
-            let mut _arbitrary_number = 0.0; // feel free to remove
+            let oscillating_value_name: CString = CString::new("oscVal").unwrap();
+            let oscillating_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
+
+            let matrix_name: CString = CString::new("matrix").unwrap();
+            let matrix_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, matrix_name.as_ptr()) };
 
             if let Ok(mut new_size) = arc_window_size.lock() {
                if new_size.2 {
@@ -387,11 +444,21 @@ fn main() {
                   match key {
                      // The `VirtualKeyCode` enum is defined here:
                      //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
+                     VirtualKeyCode::W => {
+                        cam_angle_x += delta_time;
+                        // cam_angle_x = cam_angle_x.to_radians();
+                     }
                      VirtualKeyCode::A => {
-                        _arbitrary_number += delta_time;
+                        cam_angle_y += delta_time;
+                        // cam_angle_y = cam_angle_y.to_radians();
+                     }
+                     VirtualKeyCode::S => {
+                        cam_angle_x -= delta_time;
+                        // cam_angle_x = cam_angle_x.to_radians();
                      }
                      VirtualKeyCode::D => {
-                        _arbitrary_number -= delta_time;
+                        cam_angle_y -= delta_time;
+                        // cam_angle_y = cam_angle_y.to_radians();
                      }
 
                      // default handler:
@@ -409,10 +476,72 @@ fn main() {
 
             // == // Please compute camera transforms here (exercise 2 & 3)
 
+            // Column major matrices
+            let id_mat: glm::Mat4 = glm::identity();
+
+
+            // Replace m34 with -1.0 * elapsed.sin().abs() - 1.0 for the funnies.
+            let trans_mat: glm::Mat4 = glm::mat4(
+               1.0, 0.0, 0.0, 0.0, // First column
+               0.0, 1.0, 0.0, 0.0, // Second column
+               0.0, 0.0, 1.0, 0.0, // Third column
+               0.0, 0.0, 0.0, 1.0, // Fourth column
+            );
+
+            let cos_x: f32 = cam_angle_x.cos();
+            let sin_x: f32 = cam_angle_x.sin();
+
+            let cos_y: f32 = cam_angle_y.cos();
+            let sin_y: f32 = cam_angle_y.sin();
+
+            let cos_z: f32 = cam_angle_z.cos();
+            let sin_z: f32 = cam_angle_z.sin();
+
+            let rot_x_mat: glm::Mat4 = glm::mat4(
+               1.0, 0.0, 0.0, 0.0,
+               0.0, cos_x, -sin_x, 0.0,
+               0.0, sin_x, cos_x, 0.0,
+               0.0, 0.0, 0.0, 1.0,
+            );
+
+            let rot_y_mat: glm::Mat4 = glm::mat4(
+               cos_y, 0.0, sin_y, 0.0,
+               0.0, 1.0, 0.0, 0.0,
+               -sin_y, 0.0, cos_y, 0.0,
+               0.0, 0.0, 0.0, 1.0,
+            );
+
+            let rot_z_mat: glm::Mat4 = glm::mat4(
+               cos_x, -sin_x, 0.0, 0.0,
+               sin_x, cos_x, 0.0, 0.0,
+               0.0, 0.0, 1.0, 0.0,
+               0.0, 0.0, 0.0, 1.0,
+            );
+
+            let trans_mat: glm::Mat4 = glm::mat4(
+               1.0, 0.0, 0.0, 0.0,
+               0.0, 1.0, 0.0, 0.0,
+               0.0, 0.0, 1.0, -2.5,
+               0.0, 0.0, 0.0, 1.0,
+            );
+
+            let proj_mat: glm::Mat4 = glm::perspective(
+               INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32,
+               120.0_f32.to_radians(), 
+               1.0, 
+               100.0,
+            );
+
+
+            let combined_mat: glm::Mat4 = proj_mat * trans_mat * rot_z_mat * rot_y_mat * rot_x_mat * id_mat;
+
             unsafe {
                // Clear the color and depth buffers
                gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
+               // gl::ClearColor(1.0, 1.0, 1.0, 1.0); // night sky
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+               // gl::Disable(gl::CULL_FACE); //Used to see affine transformations
 
                // == // Issue the necessary gl:: commands to draw your scene here
 
@@ -422,6 +551,8 @@ fn main() {
                // Activate the shader and draw the elements
                simple_shader.activate();
                unsafe { gl::Uniform1f(time_loc, elapsed) };
+               unsafe { gl::Uniform1f(oscillating_loc, elapsed.sin()) };
+               unsafe { gl::UniformMatrix4fv(matrix_loc, 1, gl::FALSE, combined_mat.as_ptr())}
                gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
             }
 
