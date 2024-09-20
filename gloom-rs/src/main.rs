@@ -271,11 +271,8 @@ fn main() {
             }
 
             // Handle Escape and Q keys separately
-            match keycode {
-               Escape => {
-                  *control_flow = ControlFlow::Exit;
-               }
-               _ => {}
+            if keycode == Escape {
+               *control_flow = ControlFlow::Exit;
             }
          }
          Event::DeviceEvent { event: DeviceEvent::MouseMotion { delta }, .. } => {
