@@ -58,16 +58,16 @@ fn offset<T>(n: u32) -> *const c_void {
 // ptr::null()
 
 // == // Generate your VAO here
-unsafe fn create_vao(vertices: &[f32], indices: &[u32]) -> u32 {
+unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32]) -> u32 {
    // Generate a VAO and bind it
    let mut vao: u32 = 0;
    gl::GenVertexArrays(1, &mut vao);
    gl::BindVertexArray(vao);
 
-   // Generate a VBO and bind it
-   let mut vbo: u32 = 0;
-   gl::GenBuffers(1, &mut vbo);
-   gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+   // Generate a verticy VBO and bind it
+   let mut verticy_vbo: u32 = 0;
+   gl::GenBuffers(1, &mut verticy_vbo);
+   gl::BindBuffer(gl::ARRAY_BUFFER, verticy_vbo);
 
    // Fill it with data
    gl::BufferData(
@@ -77,10 +77,22 @@ unsafe fn create_vao(vertices: &[f32], indices: &[u32]) -> u32 {
       gl::STATIC_DRAW,
    );
 
-   // Configure a VAP
-   let stride = 3 * size_of::<f32>();
-   gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, ptr::null());
+   // Configure a VAP for the vertices
+   let vertex_stride: i32 = 3 * size_of::<f32>();
+   gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, vertex_stride, ptr::null());
    gl::EnableVertexAttribArray(0);
+
+   // Generate a color VBO and bind it
+   let mut color_vbo: u32 = 0;
+   gl::GenBuffers(1, &mut color_vbo);
+   gl::BindBuffer(gl::ARRAY_BUFFER, color_vbo);
+
+   // Fill it with data
+   gl::BufferData(gl::ARRAY_BUFFER, byte_size_of_array(colors), pointer_to_array(colors), gl::STATIC_DRAW);
+
+   let color_stride: i32 = 4 * size_of::<f32>();
+   gl::VertexAttribPointer(1, 4, gl::FLOAT, gl::FALSE, color_stride, ptr::null());
+   gl::EnableVertexAttribArray(1);
 
    // Generate a IBO and bind it
    let mut ibo: u32 = 0;
@@ -215,6 +227,10 @@ fn main() {
    // == // From here on down there are only internals.
    // == //
 
+   let mut cam_pos: Vec<f32> = vec![0.0, 0.0, -5.0];
+   let mut yaw: f32 = 0.0;
+   let mut pitch: f32 = 0.0;
+
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
       *control_flow = ControlFlow::Poll;
@@ -255,14 +271,8 @@ fn main() {
             }
 
             // Handle Escape and Q keys separately
-            match keycode {
-               Escape => {
-                  *control_flow = ControlFlow::Exit;
-               }
-               Q => {
-                  *control_flow = ControlFlow::Exit;
-               }
-               _ => {}
+            if keycode == Escape {
+               *control_flow = ControlFlow::Exit;
             }
          }
          Event::DeviceEvent { event: DeviceEvent::MouseMotion { delta }, .. } => {
@@ -283,19 +293,100 @@ fn main() {
             // Vertex coordinates no UV or RGB
 
             let vertices: Vec<f32> = vec![
-               //    // X, Y, Z
-               //    // 0.6, -0.8, -1.2,
-               //    // 0.0, 0.4, 0.0,
-               //    // -0.8, -0.2, 1.2,
-               -0.90, 0.05, 0.0, -0.05, 0.90, 0.0, -0.95, 0.95, 0.0, -0.95, -0.95, 0.0, -0.05, -0.90, 0.0,
-               -0.90, -0.05, 0.0, 0.05, 0.90, 0.0, 0.90, 0.05, 0.0, 0.95, 0.95, 0.0, 0.05, -0.90, 0.0, 0.95,
-               -0.95, 0.0, 0.90, -0.05, 0.0, -0.3, -0.3, 0.0, 0.3, -0.3, 0.0, 0.0, 0.3, 0.0,
+               // X, Y, Z
+               //
+               // -0.90, 0.05, 0.0,
+               // -0.05, 0.90, 0.0,
+               // -0.95, 0.95, 0.0,
+
+               // -0.95, -0.95, 0.0,
+               // -0.05, -0.90, 0.0,
+               // -0.90, -0.05, 0.0,
+
+               // 0.05, 0.90, 0.0,
+               // 0.90, 0.05, 0.0,
+               // 0.95, 0.95, 0.0,
+
+               // 0.05, -0.90, 0.0,
+               // 0.95, -0.95, 0.0,
+               // 0.90, -0.05, 0.0,
+
+               // -0.3, -0.3, 0.0,
+               // 0.3, -0.3, 0.0,
+               // 0.0, 0.3, 0.0,
+
+               // // Task 2
+               // -0.8, 0.8, -0.9,
+               // -0.9, 0.0, -0.9,
+               // 0.4, -0.2, -0.9,
+
+               // 0.8, 0.8, -0.5,
+               // -0.4, -0.2, -0.5,
+               // 0.9, 0.0, -0.5,
+
+               // -0.4, -0.8, -0.1,
+               // 0.4, -0.8, -0.1,
+               // 0.0, 0.4, -0.1
+
+               // Task 3
+               // Front
+               -0.4, 0.4, 0.4, // Top left
+               -0.4, -0.4, 0.4, // Bottom left
+               0.4, -0.4, 0.4, // Bottom right
+               0.4, 0.4, 0.4, // Top right
+               // Back
+               -0.4, 0.4, -0.4, // Top left
+               -0.4, -0.4, -0.4, // Bottom Left
+               0.4, -0.4, -0.4, // Bottom right
+               0.4, 0.4, -0.4, // Top right
             ];
 
-            // let indices: Vec<u32> = fill_indices(&vertices);
-            let indices: Vec<u32> = fill_indices(&vertices);
+            let colors: Vec<f32> = vec![
+               // R, G, B, A
+               // Colors for Task 1
+               // 0.1, 0.2, 0.3, 1.0,
+               // 0.4, 0.5, 0.6, 1.0,
+               // 0.7, 0.8, 0.9, 1.0,
 
-            let my_vao = unsafe { create_vao(&vertices, &indices) };
+               // 0.9, 0.1, 0.8, 1.0,
+               // 0.2, 0.7, 0.3, 1.0,
+               // 0.6, 0.4, 0.5, 1.0,
+
+               // 0.9, 0.7, 0.8, 1.0,
+               // 0.6, 0.5, 0.4, 1.0,
+               // 0.3, 0.2, 0.1, 1.0,
+
+               // // Task 2
+               // // 1
+               // 0.1, 0.2, 0.9, 0.6,
+               // 0.1, 0.2, 0.9, 0.6,
+               // 0.1, 0.2, 0.9, 0.6,
+
+               // // 2
+               // 0.9, 0.3, 0.4, 0.4,
+               // 0.9, 0.3, 0.4, 0.4,
+               // 0.9, 0.3, 0.4, 0.4,
+
+               // // 3
+               // 0.2, 0.6, 0.3, 0.5,
+               // 0.2, 0.6, 0.3, 0.5,
+               // 0.2, 0.6, 0.3, 0.5,
+
+               // Task 3
+               0.9, 0.2, 0.9, 1.0, 0.4, 0.9, 0.4, 1.0, 0.9, 0.9, 0.2, 1.0, 0.4, 0.9, 0.9, 1.0, 0.3, 0.4, 0.6,
+               1.0, 0.4, 0.9, 0.5, 1.0, 0.2, 0.9, 0.2, 1.0, 0.8, 0.9, 0.2, 1.0,
+            ];
+
+            let indices: Vec<u32> = vec![
+               0, 1, 2, 3, 0, 2, // Front
+               0, 4, 1, 4, 5, 1, // Left
+               3, 2, 6, 6, 7, 3, // Right
+               6, 5, 4, 6, 4, 7, // Back
+               0, 7, 4, 0, 3, 7, // Top
+               6, 1, 5, 6, 2, 1, // Bottom
+            ];
+
+            let my_vao = unsafe { create_vao(&vertices, &indices, &colors) };
 
             // == // Set up your shaders here
 
@@ -310,8 +401,13 @@ fn main() {
             let name: CString = CString::new("time").unwrap();
             let time_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, name.as_ptr()) };
 
-            // Used to demonstrate keyboard handling for exercise 2.
-            let mut _arbitrary_number = 0.0; // feel free to remove
+            let oscillating_value_name: CString = CString::new("oscVal").unwrap();
+            let oscillating_loc: i32 =
+               unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
+
+            let matrix_name: CString = CString::new("matrix").unwrap();
+            let matrix_loc: i32 =
+               unsafe { gl::GetUniformLocation(simple_shader.program_id, matrix_name.as_ptr()) };
 
             if let Ok(mut new_size) = arc_window_size.lock() {
                if new_size.2 {
@@ -331,11 +427,29 @@ fn main() {
                   match key {
                      // The `VirtualKeyCode` enum is defined here:
                      //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
+                     VirtualKeyCode::W => {
+                        cam_pos[2] += 0.01;
+                     }
                      VirtualKeyCode::A => {
-                        _arbitrary_number += delta_time;
+                        yaw += 1.0;
+                     }
+                     VirtualKeyCode::S => {
+                        cam_pos[2] -= 0.01;
                      }
                      VirtualKeyCode::D => {
-                        _arbitrary_number -= delta_time;
+                        yaw -= 1.0;
+                     }
+                     VirtualKeyCode::Space => {
+                        cam_pos[1] -= 0.01;
+                     }
+                     VirtualKeyCode::LShift => {
+                        cam_pos[1] += 0.01;
+                     }
+                     VirtualKeyCode::Q => {
+                        pitch += 0.5;
+                     }
+                     VirtualKeyCode::E => {
+                        pitch -= 0.5;
                      }
 
                      // default handler:
@@ -353,10 +467,62 @@ fn main() {
 
             // == // Please compute camera transforms here (exercise 2 & 3)
 
+            // Column major matrices
+            let id_mat: glm::Mat4 = glm::identity();
+
+            // Replace m34 with -1.0 * elapsed.sin().abs() - 1.0 for the funnies.
+            let trans_mat: glm::Mat4 = glm::mat4(
+               1.0, 0.0, 0.0, 0.0, // First column
+               0.0, 1.0, 0.0, 0.0, // Second column
+               0.0, 0.0, 1.0, -4.0, // Third column
+               0.0, 0.0, 0.0, 1.0, // Fourth column
+            );
+
+            // let rot_x_mat: glm::Mat4 = glm::mat4(
+            //    1.0, 0.0, 0.0, 0.0,
+            //    0.0, cos_x, -sin_x, 0.0,
+            //    0.0, sin_x, cos_x, 0.0,
+            //    0.0, 0.0, 0.0, 1.0,
+            // );
+
+            // let rot_y_mat: glm::Mat4 = glm::mat4(
+            //    cos_y, 0.0, sin_y, 0.0,
+            //    0.0, 1.0, 0.0, 0.0,
+            //    -sin_y, 0.0, cos_y, 0.0,
+            //    0.0, 0.0, 0.0, 1.0,
+            // );
+
+            // let rot_z_mat: glm::Mat4 = glm::mat4(
+            //    cos_x, -sin_x, 0.0, 0.0,
+            //    sin_x, cos_x, 0.0, 0.0,
+            //    0.0, 0.0, 1.0, 0.0,
+            //    0.0, 0.0, 0.0, 1.0,
+            // );
+
+            let trans_mat: glm::Mat4 = glm::mat4(
+               1.0, 0.0, 0.0, cam_pos[0], 0.0, 1.0, 0.0, cam_pos[1], 0.0, 0.0, 1.0, cam_pos[2], 0.0, 0.0,
+               0.0, 1.0,
+            );
+
+            let proj_mat: glm::Mat4 = glm::perspective(
+               INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32,
+               60.0_f32.to_radians(),
+               1.0,
+               100.0,
+            );
+
+            let rotation_x: glm::Mat4 = glm::rotation(pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
+            let rotation_y: glm::Mat4 = glm::rotation(yaw.to_radians(), &glm::vec3(0.0, 1.0, 0.0));
+
+            let combined_mat: glm::Mat4 = proj_mat * trans_mat * rotation_x * rotation_y * id_mat;
+
             unsafe {
                // Clear the color and depth buffers
                gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
+                                                         // gl::ClearColor(1.0, 1.0, 1.0, 1.0); // night sky
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+               // gl::Disable(gl::CULL_FACE); //Used to see affine transformations
 
                // == // Issue the necessary gl:: commands to draw your scene here
 
@@ -366,6 +532,8 @@ fn main() {
                // Activate the shader and draw the elements
                simple_shader.activate();
                unsafe { gl::Uniform1f(time_loc, elapsed) };
+               unsafe { gl::Uniform1f(oscillating_loc, elapsed.sin()) };
+               unsafe { gl::UniformMatrix4fv(matrix_loc, 1, gl::FALSE, combined_mat.as_ptr()) }
                gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
             }
 

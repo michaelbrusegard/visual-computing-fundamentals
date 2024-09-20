@@ -1,9 +1,21 @@
 #version 410 core
 
-in vec3 position;
+layout(location=0) in vec3 position;
+layout(location=1) in vec4 color;
+
+uniform float oscVal;
+uniform mat4 matrix;
+
+out vec4 vertColor;
 
 void main()
 {
-    // vec3 flipped_position = vec3(position.x * -1, position.y * -1, position.z);
-    gl_Position = vec4(position, 1.0f);
+    vec4 pos = vec4(position, 1.0);
+
+    // When defining our matrix like this
+    vec4 transformed_position = matrix * pos;
+
+
+    gl_Position = transformed_position;
+    vertColor = color;
 }
