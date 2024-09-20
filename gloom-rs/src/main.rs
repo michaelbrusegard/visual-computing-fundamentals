@@ -88,12 +88,7 @@ unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32]) -> u32 {
    gl::BindBuffer(gl::ARRAY_BUFFER, color_vbo);
 
    // Fill it with data
-   gl::BufferData(
-      gl::ARRAY_BUFFER,
-      byte_size_of_array(colors),
-      pointer_to_array(colors),
-      gl::STATIC_DRAW,
-   );
+   gl::BufferData(gl::ARRAY_BUFFER, byte_size_of_array(colors), pointer_to_array(colors), gl::STATIC_DRAW);
 
    let color_stride: i32 = 4 * size_of::<f32>();
    gl::VertexAttribPointer(1, 4, gl::FLOAT, gl::FALSE, color_stride, ptr::null());
@@ -302,25 +297,25 @@ fn main() {
 
             let vertices: Vec<f32> = vec![
                // X, Y, Z
-               // 
-               // -0.90, 0.05, 0.0, 
-               // -0.05, 0.90, 0.0, 
-               // -0.95, 0.95, 0.0, 
+               //
+               // -0.90, 0.05, 0.0,
+               // -0.05, 0.90, 0.0,
+               // -0.95, 0.95, 0.0,
 
-               // -0.95, -0.95, 0.0, 
+               // -0.95, -0.95, 0.0,
                // -0.05, -0.90, 0.0,
                // -0.90, -0.05, 0.0,
 
-               // 0.05, 0.90, 0.0, 
-               // 0.90, 0.05, 0.0, 
-               // 0.95, 0.95, 0.0, 
+               // 0.05, 0.90, 0.0,
+               // 0.90, 0.05, 0.0,
+               // 0.95, 0.95, 0.0,
 
-               // 0.05, -0.90, 0.0, 
-               // 0.95, -0.95, 0.0, 
-               // 0.90, -0.05, 0.0, 
+               // 0.05, -0.90, 0.0,
+               // 0.95, -0.95, 0.0,
+               // 0.90, -0.05, 0.0,
 
-               // -0.3, -0.3, 0.0, 
-               // 0.3, -0.3, 0.0, 
+               // -0.3, -0.3, 0.0,
+               // 0.3, -0.3, 0.0,
                // 0.0, 0.3, 0.0,
 
                // // Task 2
@@ -342,7 +337,6 @@ fn main() {
                -0.4, -0.4, 0.4, // Bottom left
                0.4, -0.4, 0.4, // Bottom right
                0.4, 0.4, 0.4, // Top right
-
                // Back
                -0.4, 0.4, -0.4, // Top left
                -0.4, -0.4, -0.4, // Bottom Left
@@ -382,15 +376,8 @@ fn main() {
                // 0.2, 0.6, 0.3, 0.5,
 
                // Task 3
-               0.9, 0.2, 0.9, 1.0,
-               0.4, 0.9, 0.4, 1.0,
-               0.9, 0.9, 0.2, 1.0,
-               0.4, 0.9, 0.9, 1.0,
-
-               0.3, 0.4, 0.6, 1.0,
-               0.4, 0.9, 0.5, 1.0,
-               0.2, 0.9, 0.2, 1.0,
-               0.8, 0.9, 0.2, 1.0
+               0.9, 0.2, 0.9, 1.0, 0.4, 0.9, 0.4, 1.0, 0.9, 0.9, 0.2, 1.0, 0.4, 0.9, 0.9, 1.0, 0.3, 0.4, 0.6,
+               1.0, 0.4, 0.9, 0.5, 1.0, 0.2, 0.9, 0.2, 1.0, 0.8, 0.9, 0.2, 1.0,
             ];
 
             let indices: Vec<u32> = vec![
@@ -418,10 +405,12 @@ fn main() {
             let time_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, name.as_ptr()) };
 
             let oscillating_value_name: CString = CString::new("oscVal").unwrap();
-            let oscillating_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
+            let oscillating_loc: i32 =
+               unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
 
             let matrix_name: CString = CString::new("matrix").unwrap();
-            let matrix_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, matrix_name.as_ptr()) };
+            let matrix_loc: i32 =
+               unsafe { gl::GetUniformLocation(simple_shader.program_id, matrix_name.as_ptr()) };
 
             if let Ok(mut new_size) = arc_window_size.lock() {
                if new_size.2 {
@@ -465,7 +454,7 @@ fn main() {
                      VirtualKeyCode::E => {
                         pitch -= 0.5;
                      }
- 
+
                      // default handler:
                      _ => {}
                   }
@@ -483,7 +472,6 @@ fn main() {
 
             // Column major matrices
             let id_mat: glm::Mat4 = glm::identity();
-
 
             // Replace m34 with -1.0 * elapsed.sin().abs() - 1.0 for the funnies.
             let trans_mat: glm::Mat4 = glm::mat4(
@@ -515,29 +503,26 @@ fn main() {
             // );
 
             let trans_mat: glm::Mat4 = glm::mat4(
-               1.0, 0.0, 0.0, cam_pos[0],
-               0.0, 1.0, 0.0, cam_pos[1],
-               0.0, 0.0, 1.0, cam_pos[2],
-               0.0, 0.0, 0.0, 1.0,
+               1.0, 0.0, 0.0, cam_pos[0], 0.0, 1.0, 0.0, cam_pos[1], 0.0, 0.0, 1.0, cam_pos[2], 0.0, 0.0,
+               0.0, 1.0,
             );
 
             let proj_mat: glm::Mat4 = glm::perspective(
                INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32,
-               60.0_f32.to_radians(), 
-               1.0, 
+               60.0_f32.to_radians(),
+               1.0,
                100.0,
             );
 
             let rotation_x: glm::Mat4 = glm::rotation(pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
             let rotation_y: glm::Mat4 = glm::rotation(yaw.to_radians(), &glm::vec3(0.0, 1.0, 0.0));
 
-
             let combined_mat: glm::Mat4 = proj_mat * trans_mat * rotation_x * rotation_y * id_mat;
 
             unsafe {
                // Clear the color and depth buffers
                gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
-               // gl::ClearColor(1.0, 1.0, 1.0, 1.0); // night sky
+                                                         // gl::ClearColor(1.0, 1.0, 1.0, 1.0); // night sky
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                // gl::Disable(gl::CULL_FACE); //Used to see affine transformations
@@ -551,7 +536,7 @@ fn main() {
                simple_shader.activate();
                unsafe { gl::Uniform1f(time_loc, elapsed) };
                unsafe { gl::Uniform1f(oscillating_loc, elapsed.sin()) };
-               unsafe { gl::UniformMatrix4fv(matrix_loc, 1, gl::FALSE, combined_mat.as_ptr())}
+               unsafe { gl::UniformMatrix4fv(matrix_loc, 1, gl::FALSE, combined_mat.as_ptr()) }
                gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
             }
 
