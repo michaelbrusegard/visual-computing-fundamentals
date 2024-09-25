@@ -14,7 +14,10 @@ use std::{mem, os::raw::c_void, ptr};
 
 mod shader;
 mod util;
+mod mesh;
 
+use gl::types::GLenum;
+use glm::{inverse, Vec3};
 use glutin::event::{
    DeviceEvent,
    ElementState::{Pressed, Released},
@@ -23,6 +26,7 @@ use glutin::event::{
    WindowEvent,
 };
 use glutin::event_loop::ControlFlow;
+use mesh::Mesh;
 
 // initial window size
 const INITIAL_SCREEN_W: u32 = 600;
@@ -57,142 +61,62 @@ fn offset<T>(n: u32) -> *const c_void {
 // Get a null pointer (equivalent to an offset of 0)
 // ptr::null()
 
+unsafe fn gen_vbo_buffer<T>(array_data: &[T], target: GLenum, usage: GLenum) {
+   // Generate a vbo
+   let mut data_vbo: u32 = 0;
+   gl::GenBuffers(1, &mut data_vbo);
+   gl::BindBuffer(target, data_vbo);
+
+   gl::BufferData(
+      target,
+      byte_size_of_array(array_data),
+      pointer_to_array(array_data),
+      usage
+   );
+}
+
+
 // == // Generate your VAO here
-unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32]) -> u32 {
+unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32], normals: &[f32]) -> u32 {
    // Generate a VAO and bind it
    let mut vao: u32 = 0;
    gl::GenVertexArrays(1, &mut vao);
    gl::BindVertexArray(vao);
 
    // Generate a verticy VBO and bind it
-   let mut verticy_vbo: u32 = 0;
-   gl::GenBuffers(1, &mut verticy_vbo);
-   gl::BindBuffer(gl::ARRAY_BUFFER, verticy_vbo);
-
-   // Fill it with data
-   gl::BufferData(
-      gl::ARRAY_BUFFER,
-      byte_size_of_array(vertices),
-      pointer_to_array(vertices),
-      gl::STATIC_DRAW,
-   );
+   gen_vbo_buffer(vertices, gl::ARRAY_BUFFER, gl::STATIC_DRAW);
 
    // Configure a VAP for the vertices
    let vertex_stride: i32 = 3 * size_of::<f32>();
    gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, vertex_stride, ptr::null());
    gl::EnableVertexAttribArray(0);
 
-   // Generate a color VBO and bind it
-   let mut color_vbo: u32 = 0;
-   gl::GenBuffers(1, &mut color_vbo);
-   gl::BindBuffer(gl::ARRAY_BUFFER, color_vbo);
 
-   // Fill it with data
-   gl::BufferData(
-      gl::ARRAY_BUFFER,
-      byte_size_of_array(colors),
-      pointer_to_array(colors),
-      gl::STATIC_DRAW,
-   );
+   // Generate a normal VBO and bind it
+   gen_vbo_buffer(normals, gl::ARRAY_BUFFER, gl::STATIC_DRAW);
 
-   let color_stride: i32 = 4 * size_of::<f32>();
-   gl::VertexAttribPointer(1, 4, gl::FLOAT, gl::FALSE, color_stride, ptr::null());
+   // Configure a VAP for the normals
+   let normal_stride: i32 = 3 * size_of::<f32>();
+   gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, normal_stride, ptr::null());
    gl::EnableVertexAttribArray(1);
 
-   // Generate a IBO and bind it
-   let mut ibo: u32 = 0;
-   gl::GenBuffers(1, &mut ibo);
-   gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
 
-   // Fill the IBO with data
-   gl::BufferData(
-      gl::ELEMENT_ARRAY_BUFFER,
-      byte_size_of_array(indices),
-      pointer_to_array(indices),
-      gl::STATIC_DRAW,
-   );
+   // Generate a color VBO and bind it
+   gen_vbo_buffer(colors, gl::ARRAY_BUFFER, gl::STATIC_DRAW);
+
+   // Color VAP
+   let color_stride: i32 = 4 * size_of::<f32>();
+   gl::VertexAttribPointer(2, 4, gl::FLOAT, gl::FALSE, color_stride, ptr::null());
+   gl::EnableVertexAttribArray(2);
+
+   // Generate a IBO and bind it
+   gen_vbo_buffer(indices, gl::ELEMENT_ARRAY_BUFFER, gl::STATIC_DRAW);
 
    // Return the id of the VAO
    vao
 }
 
-fn fill_indices(vertices: &[f32]) -> Vec<u32> {
-   let mut indices: Vec<u32> = Vec::new();
-   for i in 0..(vertices.len() / 3) {
-      indices.push(i as u32);
-   }
-   indices
-}
-
-// Draw circle from the given location
-// * 'location' - the centre position of the circle.
-// * 'r' - the radius of the circle, minimum 0.01f.
-// * 'n' - amount of vertices to define the circle, minimum 3.
-fn circle_vertices(location: Vec<f32>, r: f32, n: u32) -> Vec<f32> {
-   if n < 3 || r < 0.01 {
-      // Return empty vertices
-      return vec![];
-   }
-
-   // Calculate degrees between each verticy
-   let angle: f32 = (2.0 * std::f32::consts::PI) / n as f32;
-
-   // Calculate the x and y positions where same index belongs to eachother
-   let mut vertices: Vec<f32> = Vec::new();
-
-   for i in 0..n {
-      let x: f32 = r * f32::cos(angle * i as f32) - location[0];
-      let y: f32 = r * f32::sin(angle * i as f32) - location[1];
-      vertices.push(x);
-      vertices.push(y);
-      vertices.push(0.0 + location[2]);
-   }
-
-   vertices
-}
-
-fn fill_circle_indices(vertices: &[f32]) -> Vec<u32> {
-   let mut i: u32 = 1;
-   let mut indices: Vec<u32> = Vec::new();
-
-   while i < vertices.len() as u32 {
-      indices.push(0);
-      indices.push(i);
-      indices.push(i + 1);
-      i += 1;
-   }
-
-   indices
-}
-
-fn main() {
-   // Set up the necessary objects to deal with windows and event handling
-   let el = glutin::event_loop::EventLoop::new();
-   let wb = glutin::window::WindowBuilder::new()
-      .with_title("Gloom-rs")
-      .with_resizable(true)
-      .with_inner_size(glutin::dpi::LogicalSize::new(INITIAL_SCREEN_W, INITIAL_SCREEN_H));
-   let cb = glutin::ContextBuilder::new().with_vsync(true);
-   let windowed_context = cb.build_windowed(wb, &el).unwrap();
-   // Acquire the OpenGL Context and load the function pointers.
-   let context = unsafe { windowed_context.make_current().unwrap() };
-   gl::load_with(|symbol| context.get_proc_address(symbol) as *const _);
-
-   // Uncomment these if you want to use the mouse for controls, but want it to be confined to the screen and/or invisible.
-   // windowed_context.window().set_cursor_grab(true).expect("failed to grab cursor");
-   // windowed_context.window().set_cursor_visible(false);
-
-   // Set up a shared vector for keeping track of currently pressed keys
-   let arc_pressed_keys = Arc::new(Mutex::new(Vec::<VirtualKeyCode>::with_capacity(10)));
-
-   // Set up shared tuple for tracking mouse movement between frames
-   let arc_mouse_delta = Arc::new(Mutex::new((0f32, 0f32)));
-
-   // Set up shared tuple for tracking changes to the window size
-   let arc_window_size = Arc::new(Mutex::new((INITIAL_SCREEN_W, INITIAL_SCREEN_H, false)));
-
-   // let mut window_aspect_ratio = INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32;
-
+fn setup() {
    // Set up openGL
    unsafe {
       gl::Enable(gl::DEPTH_TEST);
@@ -224,17 +148,51 @@ fn main() {
       println!("OpenGL\t: {}", util::get_gl_string(gl::VERSION));
       println!("GLSL\t: {}", util::get_gl_string(gl::SHADING_LANGUAGE_VERSION));
    }
+}
+
+fn main() {
+   // Set up the necessary objects to deal with windows and event handling
+   let el = glutin::event_loop::EventLoop::new();
+   let wb = glutin::window::WindowBuilder::new()
+      .with_title("Gloom-rs")
+      .with_resizable(true)
+      .with_inner_size(glutin::dpi::LogicalSize::new(INITIAL_SCREEN_W, INITIAL_SCREEN_H));
+   let cb = glutin::ContextBuilder::new().with_vsync(true);
+   let windowed_context = cb.build_windowed(wb, &el).unwrap();
+   // Acquire the OpenGL Context and load the function pointers.
+   let context = unsafe { windowed_context.make_current().unwrap() };
+   gl::load_with(|symbol| context.get_proc_address(symbol) as *const _);
+
+   // Uncomment these if you want to use the mouse for controls, but want it to be confined to the screen and/or invisible.
+   // windowed_context.window().set_cursor_grab(true).expect("failed to grab cursor");
+   // windowed_context.window().set_cursor_visible(false);
+
+   // Set up a shared vector for keeping track of currently pressed keys
+   let arc_pressed_keys = Arc::new(Mutex::new(Vec::<VirtualKeyCode>::with_capacity(10)));
+
+   // Set up shared tuple for tracking mouse movement between frames
+   let arc_mouse_delta = Arc::new(Mutex::new((0f32, 0f32)));
+
+   // Set up shared tuple for tracking changes to the window size
+   let arc_window_size = Arc::new(Mutex::new((INITIAL_SCREEN_W, INITIAL_SCREEN_H, false)));
+
+   // let mut window_aspect_ratio = INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32;
 
    let first_frame_time = std::time::Instant::now();
    let mut previous_frame_time = first_frame_time;
+
+   setup();
 
    // == //
    // == // From here on down there are only internals.
    // == //
 
-   let mut cam_pos: Vec<f32> = vec![0.0, 0.0, -5.0];
+   // Camera Positions
+   let mut cam_pos: Vec3 = glm::vec3(0.0, 0.0, 0.5);
    let mut yaw: f32 = 0.0;
    let mut pitch: f32 = 0.0;
+
+   let lunar_terrain_mesh: Mesh = mesh::Terrain::load("resources/lunarsurface.obj");
 
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
@@ -297,112 +255,16 @@ fn main() {
             previous_frame_time = now;
 
             // == // Set up your VAO around here
+            // Old vertices and indices for the 3D cube lies in restCode.txt for cleanup.
 
-            // Vertex coordinates no UV or RGB
-
-            let vertices: Vec<f32> = vec![
-               // X, Y, Z
-               // 
-               // -0.90, 0.05, 0.0, 
-               // -0.05, 0.90, 0.0, 
-               // -0.95, 0.95, 0.0, 
-
-               // -0.95, -0.95, 0.0, 
-               // -0.05, -0.90, 0.0,
-               // -0.90, -0.05, 0.0,
-
-               // 0.05, 0.90, 0.0, 
-               // 0.90, 0.05, 0.0, 
-               // 0.95, 0.95, 0.0, 
-
-               // 0.05, -0.90, 0.0, 
-               // 0.95, -0.95, 0.0, 
-               // 0.90, -0.05, 0.0, 
-
-               // -0.3, -0.3, 0.0, 
-               // 0.3, -0.3, 0.0, 
-               // 0.0, 0.3, 0.0,
-
-               // // Task 2
-               // -0.8, 0.8, -0.9,
-               // -0.9, 0.0, -0.9,
-               // 0.4, -0.2, -0.9,
-
-               // 0.8, 0.8, -0.5,
-               // -0.4, -0.2, -0.5,
-               // 0.9, 0.0, -0.5,
-
-               // -0.4, -0.8, -0.1,
-               // 0.4, -0.8, -0.1,
-               // 0.0, 0.4, -0.1
-
-               // Task 3
-               // Front
-               -0.4, 0.4, 0.4, // Top left
-               -0.4, -0.4, 0.4, // Bottom left
-               0.4, -0.4, 0.4, // Bottom right
-               0.4, 0.4, 0.4, // Top right
-
-               // Back
-               -0.4, 0.4, -0.4, // Top left
-               -0.4, -0.4, -0.4, // Bottom Left
-               0.4, -0.4, -0.4, // Bottom right
-               0.4, 0.4, -0.4, // Top right
-            ];
-
-            let colors: Vec<f32> = vec![
-               // R, G, B, A
-               // Colors for Task 1
-               // 0.1, 0.2, 0.3, 1.0,
-               // 0.4, 0.5, 0.6, 1.0,
-               // 0.7, 0.8, 0.9, 1.0,
-
-               // 0.9, 0.1, 0.8, 1.0,
-               // 0.2, 0.7, 0.3, 1.0,
-               // 0.6, 0.4, 0.5, 1.0,
-
-               // 0.9, 0.7, 0.8, 1.0,
-               // 0.6, 0.5, 0.4, 1.0,
-               // 0.3, 0.2, 0.1, 1.0,
-
-               // // Task 2
-               // // 1
-               // 0.1, 0.2, 0.9, 0.6,
-               // 0.1, 0.2, 0.9, 0.6,
-               // 0.1, 0.2, 0.9, 0.6,
-
-               // // 2
-               // 0.9, 0.3, 0.4, 0.4,
-               // 0.9, 0.3, 0.4, 0.4,
-               // 0.9, 0.3, 0.4, 0.4,
-
-               // // 3
-               // 0.2, 0.6, 0.3, 0.5,
-               // 0.2, 0.6, 0.3, 0.5,
-               // 0.2, 0.6, 0.3, 0.5,
-
-               // Task 3
-               0.9, 0.2, 0.9, 1.0,
-               0.4, 0.9, 0.4, 1.0,
-               0.9, 0.9, 0.2, 1.0,
-               0.4, 0.9, 0.9, 1.0,
-
-               0.3, 0.4, 0.6, 1.0,
-               0.4, 0.9, 0.5, 1.0,
-               0.2, 0.9, 0.2, 1.0,
-               0.8, 0.9, 0.2, 1.0
-            ];
-
-            let indices: Vec<u32> = vec![
-               0, 1, 2, 3, 0, 2, // Front
-               0, 4, 1, 4, 5, 1, // Left
-               3, 2, 6, 6, 7, 3, // Right
-               6, 5, 4, 6, 4, 7, // Back
-               0, 7, 4, 0, 3, 7, // Top
-               6, 1, 5, 6, 2, 1, // Bottom
-            ];
-
-            let my_vao = unsafe { create_vao(&vertices, &indices, &colors) };
+            let lunar_terrain_vao = unsafe { 
+                  create_vao(
+                     &lunar_terrain_mesh.vertices, 
+                     &lunar_terrain_mesh.indices,
+                     &lunar_terrain_mesh.colors,
+                     &lunar_terrain_mesh.normals
+                  )
+            };
 
             // == // Set up your shaders here
 
@@ -442,22 +304,22 @@ fn main() {
                      // The `VirtualKeyCode` enum is defined here:
                      //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
                      VirtualKeyCode::W => {
-                        cam_pos[2] += 0.01;
+                        cam_pos.z -= 0.5;
                      }
                      VirtualKeyCode::A => {
                         yaw += 1.0;
                      }
                      VirtualKeyCode::S => {
-                        cam_pos[2] -= 0.01;
+                        cam_pos.z += 0.5;
                      }
                      VirtualKeyCode::D => {
                         yaw -= 1.0;
                      }
                      VirtualKeyCode::Space => {
-                        cam_pos[1] -= 0.01;
+                        cam_pos.y += 0.5;
                      }
                      VirtualKeyCode::LShift => {
-                        cam_pos[1] += 0.01;
+                        cam_pos.y -= 0.5;
                      }
                      VirtualKeyCode::Q => {
                         pitch += 0.5;
@@ -484,55 +346,23 @@ fn main() {
             // Column major matrices
             let id_mat: glm::Mat4 = glm::identity();
 
-
-            // Replace m34 with -1.0 * elapsed.sin().abs() - 1.0 for the funnies.
-            let trans_mat: glm::Mat4 = glm::mat4(
-               1.0, 0.0, 0.0, 0.0, // First column
-               0.0, 1.0, 0.0, 0.0, // Second column
-               0.0, 0.0, 1.0, -4.0, // Third column
-               0.0, 0.0, 0.0, 1.0, // Fourth column
-            );
-
-            // let rot_x_mat: glm::Mat4 = glm::mat4(
-            //    1.0, 0.0, 0.0, 0.0,
-            //    0.0, cos_x, -sin_x, 0.0,
-            //    0.0, sin_x, cos_x, 0.0,
-            //    0.0, 0.0, 0.0, 1.0,
-            // );
-
-            // let rot_y_mat: glm::Mat4 = glm::mat4(
-            //    cos_y, 0.0, sin_y, 0.0,
-            //    0.0, 1.0, 0.0, 0.0,
-            //    -sin_y, 0.0, cos_y, 0.0,
-            //    0.0, 0.0, 0.0, 1.0,
-            // );
-
-            // let rot_z_mat: glm::Mat4 = glm::mat4(
-            //    cos_x, -sin_x, 0.0, 0.0,
-            //    sin_x, cos_x, 0.0, 0.0,
-            //    0.0, 0.0, 1.0, 0.0,
-            //    0.0, 0.0, 0.0, 1.0,
-            // );
-
-            let trans_mat: glm::Mat4 = glm::mat4(
-               1.0, 0.0, 0.0, cam_pos[0],
-               0.0, 1.0, 0.0, cam_pos[1],
-               0.0, 0.0, 1.0, cam_pos[2],
-               0.0, 0.0, 0.0, 1.0,
-            );
-
             let proj_mat: glm::Mat4 = glm::perspective(
                INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32,
                60.0_f32.to_radians(), 
                1.0, 
-               100.0,
+               1000.0,
             );
 
-            let rotation_x: glm::Mat4 = glm::rotation(pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
-            let rotation_y: glm::Mat4 = glm::rotation(yaw.to_radians(), &glm::vec3(0.0, 1.0, 0.0));
+            let cam_yaw: glm::Mat4 = glm::rotate(&id_mat, yaw.to_radians(), &glm::vec3(0.0, 1.0, 0.0));
+            let cam_pitch: glm::Mat4 = glm::rotate(&id_mat, pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
 
+            let rotation_mat: glm::Mat4 = cam_yaw * cam_pitch;
+            let rotated_cam_pos: glm::Vec4 = cam_yaw * glm::vec4(cam_pos.x, cam_pos.y, cam_pos.z, 1.0);
+            let cam_tran: glm::Mat4 = glm::translate(&id_mat, &glm::vec3(rotated_cam_pos.x, rotated_cam_pos.y, rotated_cam_pos.z));
+            let cam_mat: glm::Mat4 = cam_tran * rotation_mat;
 
-            let combined_mat: glm::Mat4 = proj_mat * trans_mat * rotation_x * rotation_y * id_mat;
+            let combined_mat: glm::Mat4 = proj_mat * inverse(&cam_mat);
+
 
             unsafe {
                // Clear the color and depth buffers
@@ -545,14 +375,14 @@ fn main() {
                // == // Issue the necessary gl:: commands to draw your scene here
 
                // Binding the created VAO
-               gl::BindVertexArray(my_vao);
+               gl::BindVertexArray(lunar_terrain_vao);
 
                // Activate the shader and draw the elements
                simple_shader.activate();
                unsafe { gl::Uniform1f(time_loc, elapsed) };
                unsafe { gl::Uniform1f(oscillating_loc, elapsed.sin()) };
-               unsafe { gl::UniformMatrix4fv(matrix_loc, 1, gl::FALSE, combined_mat.as_ptr())}
-               gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
+               unsafe { gl::UniformMatrix4fv(matrix_loc, 1, gl::FALSE, combined_mat.as_ptr()) }
+               gl::DrawElements(gl::TRIANGLES,  lunar_terrain_mesh.index_count, gl::UNSIGNED_INT, ptr::null());
             }
 
             // Display the new color buffer on the display
