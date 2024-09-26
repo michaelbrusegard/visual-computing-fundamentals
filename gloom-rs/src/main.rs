@@ -15,9 +15,10 @@ use std::{mem, os::raw::c_void, ptr};
 mod shader;
 mod util;
 mod mesh;
+mod scene_graph;
 
 use gl::types::GLenum;
-use glm::{inverse, Vec3};
+use glm::Vec3;
 use glutin::event::{
    DeviceEvent,
    ElementState::{Pressed, Released},
@@ -26,7 +27,8 @@ use glutin::event::{
    WindowEvent,
 };
 use glutin::event_loop::ControlFlow;
-use mesh::Mesh;
+use mesh::{Helicopter, Mesh};
+use scene_graph::{Node, SceneNode};
 
 // initial window size
 const INITIAL_SCREEN_W: u32 = 600;
@@ -113,6 +115,7 @@ unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32], normals:
    gen_vbo_buffer(indices, gl::ELEMENT_ARRAY_BUFFER, gl::STATIC_DRAW);
 
    // Return the id of the VAO
+   gl::BindVertexArray(0);
    vao
 }
 
@@ -188,11 +191,77 @@ fn main() {
    // == //
 
    // Camera Positions
-   let mut cam_pos: Vec3 = glm::vec3(0.0, 0.0, 0.5);
-   let mut yaw: f32 = 0.0;
+   let mut cam_pos: Vec3 = glm::vec3(0.0, 0.0, 3.0);
+   let mut cam_dir: Vec3 = -cam_pos.normalize();
+   let mut up_vec: Vec3 = glm::vec3(0.0, 1.0, 0.0);
+   let mut yaw: f32 = -90.0;
    let mut pitch: f32 = 0.0;
+   let speed: f32 = 0.1;
+   let sens: f32 = 0.25;
 
-   let lunar_terrain_mesh: Mesh = mesh::Terrain::load("resources/lunarsurface.obj");
+   let lunar_terrain_mesh: Mesh  = mesh::Terrain::load("resources/lunarsurface.obj");
+   let helicopter_mesh: Helicopter = mesh::Helicopter::load("resources/helicopter.obj");
+
+   // == // Set up your VAO around here
+   // Old vertices and indices for the 3D cube lies in restCode.txt for cleanup.
+
+   let lunar_terrain_vao = unsafe { 
+      create_vao(
+         &lunar_terrain_mesh.vertices, 
+         &lunar_terrain_mesh.indices,
+         &lunar_terrain_mesh.colors,
+         &lunar_terrain_mesh.normals
+      )
+   };
+
+   let helicopter_vaos: Vec<u32> = unsafe {
+      vec![
+         create_vao(&helicopter_mesh.body.vertices, &helicopter_mesh.body.indices, &helicopter_mesh.body.colors, &helicopter_mesh.body.normals),
+         create_vao(&helicopter_mesh.door.vertices, &helicopter_mesh.door.indices, &helicopter_mesh.door.colors, &helicopter_mesh.door.normals),
+         create_vao(&helicopter_mesh.main_rotor.vertices, &helicopter_mesh.main_rotor.indices, &helicopter_mesh.main_rotor.colors, &helicopter_mesh.main_rotor.normals),
+         create_vao(&helicopter_mesh.tail_rotor.vertices, &helicopter_mesh.tail_rotor.indices, &helicopter_mesh.tail_rotor.colors, &helicopter_mesh.tail_rotor.normals)
+      ]
+   };
+
+   let helicopter_indices: Vec<i32> = vec![
+      helicopter_mesh.body.index_count,
+      helicopter_mesh.door.index_count,
+      helicopter_mesh.main_rotor.index_count,
+      helicopter_mesh.tail_rotor.index_count
+   ];
+
+   let mut terrain_scene_node: Node = SceneNode::from_vao(lunar_terrain_vao, lunar_terrain_mesh.index_count);
+   let mut heli_body_scene_node: Node = SceneNode::from_vao(helicopter_vaos[0], helicopter_indices[0]);
+   let mut heli_door_scene_node: Node = SceneNode::from_vao(helicopter_vaos[1], helicopter_indices[1]);
+   let mut heli_main_rotor_scene_node: Node = SceneNode::from_vao(helicopter_vaos[2], helicopter_indices[2]);
+   let mut heli_tail_rotor_scene_node: Node = SceneNode::from_vao(helicopter_vaos[3], helicopter_indices[3]);
+
+   let mut scene: Node = SceneNode::new(); 
+
+   heli_body_scene_node.add_child(&heli_door_scene_node);
+   heli_body_scene_node.add_child(&heli_main_rotor_scene_node);
+   heli_body_scene_node.add_child(&heli_tail_rotor_scene_node);
+   terrain_scene_node.add_child(&heli_body_scene_node);
+   scene.add_child(&terrain_scene_node);
+
+   // == // Set up your shaders here
+
+   // Attaching the vertex and fragment shader to the shader builder
+   let simple_shader = unsafe {
+      shader::ShaderBuilder::new()
+         .attach_file("./shaders/simple.vert")
+         .attach_file("./shaders/simple.frag")
+         .link()
+   };
+
+   let name: CString = CString::new("time").unwrap();
+   let time_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, name.as_ptr()) };
+
+   let oscillating_value_name: CString = CString::new("oscVal").unwrap();
+   let oscillating_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
+
+   let matrix_name: CString = CString::new("matrix").unwrap();
+   let matrix_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, matrix_name.as_ptr()) };
 
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
@@ -254,37 +323,6 @@ fn main() {
             let delta_time = now.duration_since(previous_frame_time).as_secs_f32();
             previous_frame_time = now;
 
-            // == // Set up your VAO around here
-            // Old vertices and indices for the 3D cube lies in restCode.txt for cleanup.
-
-            let lunar_terrain_vao = unsafe { 
-                  create_vao(
-                     &lunar_terrain_mesh.vertices, 
-                     &lunar_terrain_mesh.indices,
-                     &lunar_terrain_mesh.colors,
-                     &lunar_terrain_mesh.normals
-                  )
-            };
-
-            // == // Set up your shaders here
-
-            // Attaching the vertex and fragment shader to the shader builder
-            let simple_shader = unsafe {
-               shader::ShaderBuilder::new()
-                  .attach_file("./shaders/simple.vert")
-                  .attach_file("./shaders/simple.frag")
-                  .link()
-            };
-
-            let name: CString = CString::new("time").unwrap();
-            let time_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, name.as_ptr()) };
-
-            let oscillating_value_name: CString = CString::new("oscVal").unwrap();
-            let oscillating_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
-
-            let matrix_name: CString = CString::new("matrix").unwrap();
-            let matrix_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, matrix_name.as_ptr()) };
-
             if let Ok(mut new_size) = arc_window_size.lock() {
                if new_size.2 {
                   context.resize(glutin::dpi::PhysicalSize::new(new_size.0, new_size.1));
@@ -297,35 +335,52 @@ fn main() {
                }
             }
 
+            // Define the normalized direction.
+            // We only want the direction on the xz plane
+            cam_dir.x = glm::cos(&glm::radians(&glm::vec1(yaw))).x;
+            cam_dir.z = glm::sin(&glm::radians(&glm::vec1(yaw))).x;
+            cam_dir = cam_dir.normalize();
+            let cam_dir_left4: glm::Vec4 = glm::rotation((90.0 as f32).to_radians(), &glm::vec3(0.0, 1.0, 0.0)) * 
+                                           glm::vec4(cam_dir.x, cam_dir.y, cam_dir.z, 1.0);
+            let mut cam_dir_left: glm::Vec3 = glm::vec3(cam_dir_left4.x, cam_dir_left4.y, cam_dir_left4.z);
+            cam_dir_left = cam_dir_left.normalize();
+
+
             // Handle keyboard input
             if let Ok(keys) = arc_pressed_keys.lock() {
                for key in keys.iter() {
                   match key {
                      // The `VirtualKeyCode` enum is defined here:
                      //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
+
+                     // New position = (pos + dir) * speed = pos
                      VirtualKeyCode::W => {
-                        cam_pos.z -= 0.5;
+                        cam_pos.x += cam_dir.x * speed;
+                        cam_pos.z += cam_dir.z * speed;
                      }
                      VirtualKeyCode::A => {
-                        yaw += 1.0;
+                        cam_pos.x += cam_dir_left.x * speed;
+                        cam_pos.z += cam_dir_left.z * speed;
                      }
                      VirtualKeyCode::S => {
-                        cam_pos.z += 0.5;
+                        cam_pos.x -= cam_dir.x * speed;
+                        cam_pos.z -= cam_dir.z * speed;
                      }
                      VirtualKeyCode::D => {
-                        yaw -= 1.0;
+                        cam_pos.x += -cam_dir_left.x * speed;
+                        cam_pos.z += -cam_dir_left.z * speed;
                      }
                      VirtualKeyCode::Space => {
-                        cam_pos.y += 0.5;
+                        cam_pos.y += speed;
                      }
                      VirtualKeyCode::LShift => {
-                        cam_pos.y -= 0.5;
+                        cam_pos.y -= speed;
                      }
                      VirtualKeyCode::Q => {
-                        pitch += 0.5;
+                        yaw -= sens;
                      }
                      VirtualKeyCode::E => {
-                        pitch -= 0.5;
+                        yaw += sens;
                      }
  
                      // default handler:
@@ -343,8 +398,10 @@ fn main() {
 
             // == // Please compute camera transforms here (exercise 2 & 3)
 
-            // Column major matrices
-            let id_mat: glm::Mat4 = glm::identity();
+            // Using a look at matrix, which uses the properties: Up vector and direction vector.
+            let combined_pos_dir: glm::Vec3 = cam_pos + cam_dir;
+            let view: glm::Mat4 = glm::look_at(&cam_pos, &combined_pos_dir, &up_vec);
+            let rotation_x: glm::Mat4 = glm::rotation(pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
 
             let proj_mat: glm::Mat4 = glm::perspective(
                INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32,
@@ -352,16 +409,9 @@ fn main() {
                1.0, 
                1000.0,
             );
+            // New position = (pos + dir) * speed = pos
 
-            let cam_yaw: glm::Mat4 = glm::rotate(&id_mat, yaw.to_radians(), &glm::vec3(0.0, 1.0, 0.0));
-            let cam_pitch: glm::Mat4 = glm::rotate(&id_mat, pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
-
-            let rotation_mat: glm::Mat4 = cam_yaw * cam_pitch;
-            let rotated_cam_pos: glm::Vec4 = cam_yaw * glm::vec4(cam_pos.x, cam_pos.y, cam_pos.z, 1.0);
-            let cam_tran: glm::Mat4 = glm::translate(&id_mat, &glm::vec3(rotated_cam_pos.x, rotated_cam_pos.y, rotated_cam_pos.z));
-            let cam_mat: glm::Mat4 = cam_tran * rotation_mat;
-
-            let combined_mat: glm::Mat4 = proj_mat * inverse(&cam_mat);
+            let combined_mat: glm::Mat4 = proj_mat * rotation_x * view;
 
 
             unsafe {
@@ -374,15 +424,20 @@ fn main() {
 
                // == // Issue the necessary gl:: commands to draw your scene here
 
-               // Binding the created VAO
-               gl::BindVertexArray(lunar_terrain_vao);
-
                // Activate the shader and draw the elements
                simple_shader.activate();
                unsafe { gl::Uniform1f(time_loc, elapsed) };
                unsafe { gl::Uniform1f(oscillating_loc, elapsed.sin()) };
                unsafe { gl::UniformMatrix4fv(matrix_loc, 1, gl::FALSE, combined_mat.as_ptr()) }
+
+               // Binding the created VAO
+               gl::BindVertexArray(lunar_terrain_vao);
                gl::DrawElements(gl::TRIANGLES,  lunar_terrain_mesh.index_count, gl::UNSIGNED_INT, ptr::null());
+
+               for vao in 0..helicopter_vaos.len() {
+                  gl::BindVertexArray(helicopter_vaos[vao]);
+                  gl::DrawElements(gl::TRIANGLES,  helicopter_indices[vao], gl::UNSIGNED_INT, ptr::null());
+               }
             }
 
             // Display the new color buffer on the display
