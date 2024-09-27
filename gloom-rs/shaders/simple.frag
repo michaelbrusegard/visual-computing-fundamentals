@@ -19,4 +19,5 @@ void main()
     float normLightDot = dot(fNormal, -lightDirection);
 
     color = vec4(colorRGB * max(0.0, normLightDot), fColor.w);
+    // color = vec4(fNormal, 1.0);
 }

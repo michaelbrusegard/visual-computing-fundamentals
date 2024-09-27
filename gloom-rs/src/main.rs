@@ -16,9 +16,11 @@ mod shader;
 mod util;
 mod mesh;
 mod scene_graph;
+mod toolbox;
 
 use gl::types::GLenum;
-use glm::Vec3;
+use glm::{inverse, Vec3};
+use shader::Shader;
 use glutin::event::{
    DeviceEvent,
    ElementState::{Pressed, Released},
@@ -29,6 +31,7 @@ use glutin::event::{
 use glutin::event_loop::ControlFlow;
 use mesh::{Helicopter, Mesh};
 use scene_graph::{Node, SceneNode};
+use toolbox::Heading;
 
 // initial window size
 const INITIAL_SCREEN_W: u32 = 600;
@@ -119,6 +122,46 @@ unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32], normals:
    vao
 }
 
+unsafe fn draw_scene(node: &scene_graph::SceneNode, 
+   view_projection_matrix: &glm::Mat4,
+   transformation_so_far: &glm::Mat4,
+   shader: &Shader
+) {
+   let mut new_transform_so_far: glm::Mat4 = *transformation_so_far;
+   if node.index_count != -1 {
+      let projection_name: CString = CString::new("projectionMatrix").unwrap();
+      let projection_loc: i32 = gl::GetUniformLocation(shader.program_id, projection_name.as_ptr());
+
+      let transform_name: CString = CString::new("transformMatrix").unwrap();
+      let transform_loc: i32 = gl::GetUniformLocation(shader.program_id, transform_name.as_ptr());
+
+      let mcs_translate_ref: glm::Mat4 = glm::translation(&node.reference_point);
+      let mcs_translate: glm::Mat4 = glm::translation(&node.position);
+      // Assuming radians
+      let mcs_rot_x: glm::Mat4 = glm::rotation(node.rotation.x, &glm::vec3(1.0, 0.0, 0.0));
+      let mcs_rot_y: glm::Mat4 = glm::rotation(node.rotation.y, &glm::vec3(0.0, 1.0, 0.0));
+      let mcs_rot_z: glm::Mat4 = glm::rotation(node.rotation.z, &glm::vec3(0.0, 0.0, 1.0));
+
+      let mcs_rotation: glm::Mat4 = mcs_rot_x * mcs_rot_y * mcs_rot_z;
+
+      // We decide to affect rotation before translation.
+      let mcs_transform: glm::Mat4 = mcs_translate_ref * mcs_translate * mcs_rotation * inverse(&mcs_translate_ref);
+
+      new_transform_so_far *= mcs_transform; 
+
+      gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, view_projection_matrix.as_ptr());
+      gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, new_transform_so_far.as_ptr());
+
+      gl::BindVertexArray(node.vao_id);
+      gl::DrawElements(gl::TRIANGLES, node.index_count, gl::UNSIGNED_INT, ptr::null());
+   }
+
+   // Recurse
+   for &child in &node.children {
+      draw_scene(&*child, view_projection_matrix, &new_transform_so_far, shader);
+   }
+}
+
 fn setup() {
    // Set up openGL
    unsafe {
@@ -163,12 +206,13 @@ fn main() {
    let cb = glutin::ContextBuilder::new().with_vsync(true);
    let windowed_context = cb.build_windowed(wb, &el).unwrap();
    // Acquire the OpenGL Context and load the function pointers.
+   // Uncomment these if you want to use the mouse for controls, but want it to be confined to the screen and/or invisible.
+
+   windowed_context.window().set_cursor_grab(glutin::window::CursorGrabMode::Confined).expect("failed to grab cursor");
+   windowed_context.window().set_cursor_visible(false);
+
    let context = unsafe { windowed_context.make_current().unwrap() };
    gl::load_with(|symbol| context.get_proc_address(symbol) as *const _);
-
-   // Uncomment these if you want to use the mouse for controls, but want it to be confined to the screen and/or invisible.
-   // windowed_context.window().set_cursor_grab(true).expect("failed to grab cursor");
-   // windowed_context.window().set_cursor_visible(false);
 
    // Set up a shared vector for keeping track of currently pressed keys
    let arc_pressed_keys = Arc::new(Mutex::new(Vec::<VirtualKeyCode>::with_capacity(10)));
@@ -179,7 +223,10 @@ fn main() {
    // Set up shared tuple for tracking changes to the window size
    let arc_window_size = Arc::new(Mutex::new((INITIAL_SCREEN_W, INITIAL_SCREEN_H, false)));
 
-   // let mut window_aspect_ratio = INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32;
+   let mut CURRENT_SCREEN_W: u32 = INITIAL_SCREEN_W;
+   let mut CURRENT_SCREEN_H: u32 = INITIAL_SCREEN_H;
+
+   let mut pause_mode: bool = false;
 
    let first_frame_time = std::time::Instant::now();
    let mut previous_frame_time = first_frame_time;
@@ -196,7 +243,7 @@ fn main() {
    let mut up_vec: Vec3 = glm::vec3(0.0, 1.0, 0.0);
    let mut yaw: f32 = -90.0;
    let mut pitch: f32 = 0.0;
-   let speed: f32 = 0.1;
+   let speed: f32 = 0.05;
    let sens: f32 = 0.25;
 
    let lunar_terrain_mesh: Mesh  = mesh::Terrain::load("resources/lunarsurface.obj");
@@ -230,19 +277,24 @@ fn main() {
       helicopter_mesh.tail_rotor.index_count
    ];
 
-   let mut terrain_scene_node: Node = SceneNode::from_vao(lunar_terrain_vao, lunar_terrain_mesh.index_count);
-   let mut heli_body_scene_node: Node = SceneNode::from_vao(helicopter_vaos[0], helicopter_indices[0]);
-   let mut heli_door_scene_node: Node = SceneNode::from_vao(helicopter_vaos[1], helicopter_indices[1]);
-   let mut heli_main_rotor_scene_node: Node = SceneNode::from_vao(helicopter_vaos[2], helicopter_indices[2]);
-   let mut heli_tail_rotor_scene_node: Node = SceneNode::from_vao(helicopter_vaos[3], helicopter_indices[3]);
-
    let mut scene: Node = SceneNode::new(); 
+   let mut terrain_scene_node: Node = SceneNode::from_vao(lunar_terrain_vao, lunar_terrain_mesh.index_count);
 
-   heli_body_scene_node.add_child(&heli_door_scene_node);
-   heli_body_scene_node.add_child(&heli_main_rotor_scene_node);
-   heli_body_scene_node.add_child(&heli_tail_rotor_scene_node);
-   terrain_scene_node.add_child(&heli_body_scene_node);
+   for i in 0..5 {
+      let mut heli_body_scene_node: Node = SceneNode::from_vao(helicopter_vaos[0], helicopter_indices[0]);
+      let mut heli_door_scene_node: Node = SceneNode::from_vao(helicopter_vaos[1], helicopter_indices[1]);
+      let mut heli_main_rotor_scene_node: Node = SceneNode::from_vao(helicopter_vaos[2], helicopter_indices[2]);
+      let mut heli_tail_rotor_scene_node: Node = SceneNode::from_vao(helicopter_vaos[3], helicopter_indices[3]);  
+
+      heli_tail_rotor_scene_node.reference_point = glm::vec3(0.35, 2.3, 10.4);
+      heli_body_scene_node.add_child(&heli_door_scene_node);
+      heli_body_scene_node.add_child(&heli_main_rotor_scene_node);
+      heli_body_scene_node.add_child(&heli_tail_rotor_scene_node);
+      terrain_scene_node.add_child(&heli_body_scene_node);
+   }
    scene.add_child(&terrain_scene_node);
+
+   terrain_scene_node.print();
 
    // == // Set up your shaders here
 
@@ -260,9 +312,6 @@ fn main() {
    let oscillating_value_name: CString = CString::new("oscVal").unwrap();
    let oscillating_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
 
-   let matrix_name: CString = CString::new("matrix").unwrap();
-   let matrix_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, matrix_name.as_ptr()) };
-
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
       *control_flow = ControlFlow::Poll;
@@ -272,6 +321,8 @@ fn main() {
             println!("New window size received: {}x{}", physical_size.width, physical_size.height);
             if let Ok(mut new_size) = arc_window_size.lock() {
                *new_size = (physical_size.width, physical_size.height, true);
+               CURRENT_SCREEN_W = new_size.0;
+               CURRENT_SCREEN_H = new_size.1;
             }
          }
          Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
@@ -293,21 +344,32 @@ fn main() {
                         let i = keys.iter().position(|&k| k == keycode).unwrap();
                         keys.remove(i);
                      }
+                     match keycode {
+                        Escape => {
+                           pause_mode = !pause_mode;
+                           context.window().set_cursor_visible(pause_mode);
+                           if pause_mode {
+                              let _ = context.window().set_cursor_grab(glutin::window::CursorGrabMode::None);
+                           }
+                           else {
+                              let _ = context.window().set_cursor_grab(glutin::window::CursorGrabMode::Confined);
+                           }
+                        }
+                        _ => {}
+                     }
                   }
                   Pressed => {
                      if !keys.contains(&keycode) {
                         keys.push(keycode);
                      }
+                     match keycode {
+                        Q => {
+                           *control_flow = ControlFlow::Exit;
+                        }
+                        _ => {}
+                     }
                   }
                }
-            }
-
-            // Handle Escape and Q keys separately
-            match keycode {
-               Escape => {
-                  *control_flow = ControlFlow::Exit;
-               }
-               _ => {}
             }
          }
          Event::DeviceEvent { event: DeviceEvent::MouseMotion { delta }, .. } => {
@@ -376,13 +438,6 @@ fn main() {
                      VirtualKeyCode::LShift => {
                         cam_pos.y -= speed;
                      }
-                     VirtualKeyCode::Q => {
-                        yaw -= sens;
-                     }
-                     VirtualKeyCode::E => {
-                        yaw += sens;
-                     }
- 
                      // default handler:
                      _ => {}
                   }
@@ -392,6 +447,20 @@ fn main() {
             if let Ok(mut delta) = arc_mouse_delta.lock() {
                // == // Optionally access the accumulated mouse movement between
                // == // frames here with `delta.0` and `delta.1`
+               let delta_x: f32 = delta.0;
+               let delta_y: f32 = delta.1;
+
+               if !pause_mode { yaw += delta_x * sens; };
+               if !pause_mode { pitch += delta_y * sens; };
+
+               // Clamp
+               if pitch > 80.0 {
+                  pitch = 80.0;
+               }
+               else if pitch < -80.0 {
+                  pitch = -80.0;
+               }
+
 
                *delta = (0.0, 0.0); // reset when done
             }
@@ -404,14 +473,14 @@ fn main() {
             let rotation_x: glm::Mat4 = glm::rotation(pitch.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
 
             let proj_mat: glm::Mat4 = glm::perspective(
-               INITIAL_SCREEN_W as f32 / INITIAL_SCREEN_H as f32,
+               CURRENT_SCREEN_W as f32 / CURRENT_SCREEN_H as f32,
                60.0_f32.to_radians(), 
                1.0, 
                1000.0,
             );
-            // New position = (pos + dir) * speed = pos
 
-            let combined_mat: glm::Mat4 = proj_mat * rotation_x * view;
+
+            let camera_projection_mat: glm::Mat4 = proj_mat * rotation_x * view;
 
 
             unsafe {
@@ -423,21 +492,45 @@ fn main() {
                // gl::Disable(gl::CULL_FACE); //Used to see affine transformations
 
                // == // Issue the necessary gl:: commands to draw your scene here
+               for i in 0..terrain_scene_node.n_children() {
+                  let heli_heading: Heading = toolbox::simple_heading_animation(elapsed + i as f32 * 300.0);
+   
+                  let heli_body: &mut SceneNode = terrain_scene_node.get_child(i);
+                  heli_body.rotation = glm::vec3(heli_heading.pitch, heli_heading.yaw, heli_heading.roll);
+                  heli_body.position = glm::vec3(heli_heading.x, elapsed.sin(), heli_heading.z);
+   
+                  let heli_main_rotor: &mut SceneNode = heli_body.get_child(1);
+                  heli_main_rotor.rotation.y += (delta_time * 1000.0).to_radians();
+   
+                  let heli_tail_rotor: &mut SceneNode = heli_body.get_child(2);
+                  heli_tail_rotor.rotation.x += (delta_time * 1000.0).to_radians();
+               }
 
                // Activate the shader and draw the elements
                simple_shader.activate();
-               unsafe { gl::Uniform1f(time_loc, elapsed) };
-               unsafe { gl::Uniform1f(oscillating_loc, elapsed.sin()) };
-               unsafe { gl::UniformMatrix4fv(matrix_loc, 1, gl::FALSE, combined_mat.as_ptr()) }
+               gl::Uniform1f(time_loc, elapsed);
+               gl::Uniform1f(oscillating_loc, elapsed.sin());
 
-               // Binding the created VAO
-               gl::BindVertexArray(lunar_terrain_vao);
-               gl::DrawElements(gl::TRIANGLES,  lunar_terrain_mesh.index_count, gl::UNSIGNED_INT, ptr::null());
+               // Naive method
+               // This way of using the same scene node for instancing was the only way i could think of
+               // Using the restrictions of the pre-implemented code.
+               // This method is bad since we're drawing 5 times for all nodes.
+               // for i in 0..5 {
+               //    let heli_heading: Heading = toolbox::simple_heading_animation(elapsed + i as f32 * 300.0);
+   
+               //    let heli_body: &mut SceneNode = terrain_scene_node.get_child(i);
+               //    heli_body.rotation = glm::vec3(heli_heading.pitch, heli_heading.yaw, heli_heading.roll);
+               //    heli_body.position = glm::vec3(heli_heading.x, elapsed.sin(), heli_heading.z);
+   
+               //    let heli_main_rotor: &mut SceneNode = heli_body.get_child(1);
+               //    heli_main_rotor.rotation.y += (delta_time * 1000.0).to_radians();
+   
+               //    let heli_tail_rotor: &mut SceneNode = heli_body.get_child(2);
+               //    heli_tail_rotor.rotation.x += (delta_time * 1000.0).to_radians();
+               //    draw_scene(&scene, &camera_projection_mat, &glm::identity(), &simple_shader);
+               // }
 
-               for vao in 0..helicopter_vaos.len() {
-                  gl::BindVertexArray(helicopter_vaos[vao]);
-                  gl::DrawElements(gl::TRIANGLES,  helicopter_indices[vao], gl::UNSIGNED_INT, ptr::null());
-               }
+               draw_scene(&scene, &camera_projection_mat, &glm::identity(), &simple_shader);
             }
 
             // Display the new color buffer on the display
