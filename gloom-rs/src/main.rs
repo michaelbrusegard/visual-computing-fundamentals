@@ -312,6 +312,9 @@ fn main() {
    let oscillating_value_name: CString = CString::new("oscVal").unwrap();
    let oscillating_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
 
+   let camera_pos_name: CString = CString::new("cameraPosition").unwrap();
+   let camera_pos_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, camera_pos_name.as_ptr()) };
+
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
       *control_flow = ControlFlow::Poll;
@@ -493,7 +496,7 @@ fn main() {
 
                // == // Issue the necessary gl:: commands to draw your scene here
                for i in 0..terrain_scene_node.n_children() {
-                  let heli_heading: Heading = toolbox::simple_heading_animation(elapsed + i as f32 * 300.0);
+                  let heli_heading: Heading = toolbox::simple_heading_animation(0.0 + i as f32 * 300.0);
    
                   let heli_body: &mut SceneNode = terrain_scene_node.get_child(i);
                   heli_body.rotation = glm::vec3(heli_heading.pitch, heli_heading.yaw, heli_heading.roll);
@@ -510,6 +513,7 @@ fn main() {
                simple_shader.activate();
                gl::Uniform1f(time_loc, elapsed);
                gl::Uniform1f(oscillating_loc, elapsed.sin());
+               gl::Uniform3f(camera_pos_loc, cam_pos.x, cam_pos.y, cam_pos.z);
 
                // Naive method
                // This way of using the same scene node for instancing was the only way i could think of
