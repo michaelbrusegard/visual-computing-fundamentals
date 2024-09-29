@@ -8,12 +8,9 @@
 #![allow(unused_variables)]
 */
 extern crate nalgebra_glm as glm;
+use std::ffi::CString;
 use std::sync::{Arc, Mutex};
-use std::{
-   // mem,
-   // os::raw::c_void,
-   ptr,
-};
+use std::{mem, os::raw::c_void, ptr};
 
 mod shader;
 mod util;
@@ -35,21 +32,21 @@ const INITIAL_SCREEN_H: u32 = 600;
 
 // Get the size of an arbitrary array of numbers measured in bytes
 // Example usage:  byte_size_of_array(my_array)
-// fn byte_size_of_array<T>(val: &[T]) -> isize {
-//    std::mem::size_of_val(&val[..]) as isize
-// }
+fn byte_size_of_array<T>(val: &[T]) -> isize {
+   std::mem::size_of_val(&val[..]) as isize
+}
 
 // Get the OpenGL-compatible pointer to an arbitrary array of numbers
 // Example usage:  pointer_to_array(my_array)
-// fn pointer_to_array<T>(val: &[T]) -> *const c_void {
-//    &val[0] as *const T as *const c_void
-// }
+fn pointer_to_array<T>(val: &[T]) -> *const c_void {
+   &val[0] as *const T as *const c_void
+}
 
 // Get the size of the given type in bytes
 // Example usage:  size_of::<u64>()
-// fn size_of<T>() -> i32 {
-//    mem::size_of::<T>() as i32
-// }
+fn size_of<T>() -> i32 {
+   mem::size_of::<T>() as i32
+}
 
 // Get an offset in bytes for n units of type T, represented as a relative pointer
 // Example usage:  offset::<u64>(4)
@@ -61,22 +58,46 @@ const INITIAL_SCREEN_H: u32 = 600;
 // ptr::null()
 
 // == // Generate your VAO here
-// unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
-//    // Implement me!
-//
-//    // Also, feel free to delete comments :)
-//
-//    // This should:
-//    // * Generate a VAO and bind it
-//    // * Generate a VBO and bind it
-//    // * Fill it with data
-//    // * Configure a VAP for the data and enable it
-//    // * Generate a IBO and bind it
-//    // * Fill it with data
-//    // * Return the ID of the VAO
-//
-//    0
-// }
+unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
+   // Implement me!
+
+   // Also, feel free to delete comments :)
+
+   // This should:
+   // * Generate a VAO and bind it
+   let mut vao_index: u32 = 0;
+   gl::GenVertexArrays(1, &mut vao_index);
+   gl::BindVertexArray(vao_index);
+   // * Generate a VBO and bind it
+   let mut vbo_index: u32 = 0;
+   gl::GenBuffers(1, &mut vbo_index);
+   gl::BindBuffer(gl::ARRAY_BUFFER, vbo_index);
+   // * Fill it with data
+   gl::BufferData(
+      gl::ARRAY_BUFFER,
+      byte_size_of_array(vertices),
+      pointer_to_array(vertices),
+      gl::STATIC_DRAW,
+   );
+   // * Configure a VAP for the data and enable it
+   let vap_stride = 3 * size_of::<f32>();
+   gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, vap_stride, ptr::null());
+   gl::EnableVertexAttribArray(0);
+   // * Generate a IBO and bind it
+   let mut ibo_index: u32 = 0;
+   gl::GenBuffers(1, &mut ibo_index);
+   gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo_index);
+   // * Fill it with data
+   gl::BufferData(
+      gl::ELEMENT_ARRAY_BUFFER,
+      byte_size_of_array(indices),
+      pointer_to_array(indices),
+      gl::STATIC_DRAW,
+   );
+   // * Return the ID of the VAO
+
+   vao_index
+}
 
 fn main() {
    // Set up the necessary objects to deal with windows and event handling
@@ -145,15 +166,48 @@ fn main() {
    // == // From here on down there are only internals.
    // == //
 
+   let mut current_resolution_width = INITIAL_SCREEN_W;
+   let mut current_resolution_height = INITIAL_SCREEN_H;
+
+   // == // Set up your VAO around here
+
+   let vertices: Vec<f32> = vec![0.7, 0.2, 0.0, -0.7, -0.2, 0.0, 1.0, -1.0, 0.0];
+
+   let indices: Vec<u32> = vec![0, 1, 2];
+
+   let my_vao = unsafe { create_vao(&vertices, &indices) };
+
+   // == // Set up your shaders here
+
+   // Basic usage of shader helper:
+   // The example code below creates a 'shader' object.
+   // It which contains the field `.program_id` and the method `.activate()`.
+   // The `.` in the path is relative to `Cargo.toml`.
+   // This snippet is not enough to do the exercise, and will need to be modified (outside
+   // of just using the correct path), but it only needs to be called once
+
+   let simple_shader = unsafe {
+      shader::ShaderBuilder::new()
+         .attach_file("./shaders/simple.vert")
+         .attach_file("./shaders/simple.frag")
+         .link()
+   };
+
+   let resolution_name = CString::new("resolution").unwrap();
+   let resolution_location =
+      unsafe { gl::GetUniformLocation(simple_shader.program_id, resolution_name.as_ptr()) };
+
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
-      *control_flow = ControlFlow::Wait;
+      *control_flow = ControlFlow::Poll;
 
       match event {
          Event::WindowEvent { event: WindowEvent::Resized(physical_size), .. } => {
             println!("New window size received: {}x{}", physical_size.width, physical_size.height);
             if let Ok(mut new_size) = arc_window_size.lock() {
                *new_size = (physical_size.width, physical_size.height, true);
+               current_resolution_width = physical_size.width;
+               current_resolution_height = physical_size.height;
             }
          }
          Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
@@ -202,27 +256,6 @@ fn main() {
             }
          }
          Event::MainEventsCleared => {
-            // == // Set up your VAO around here
-
-            // let my_vao = unsafe { 1337 };
-
-            // == // Set up your shaders here
-
-            // Basic usage of shader helper:
-            // The example code below creates a 'shader' object.
-            // It which contains the field `.program_id` and the method `.activate()`.
-            // The `.` in the path is relative to `Cargo.toml`.
-            // This snippet is not enough to do the exercise, and will need to be modified (outside
-            // of just using the correct path), but it only needs to be called once
-
-            /*
-            let simple_shader = unsafe {
-                shader::ShaderBuilder::new()
-                    .attach_file("./path/to/simple/shader.file")
-                    .link()
-            };
-            */
-
             // Used to demonstrate keyboard handling for exercise 2.
             let mut _arbitrary_number = 0.0; // feel free to remove
 
@@ -278,6 +311,14 @@ fn main() {
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                // == // Issue the necessary gl:: commands to draw your scene here
+               simple_shader.activate();
+               gl::Uniform2f(
+                  resolution_location,
+                  current_resolution_width as f32,
+                  current_resolution_height as f32,
+               );
+               gl::BindVertexArray(my_vao);
+               gl::DrawElements(gl::TRIANGLES, indices.len() as i32, gl::UNSIGNED_INT, ptr::null());
             }
 
             // Display the new color buffer on the display
