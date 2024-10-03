@@ -36,7 +36,7 @@ void main()
     vec3 specular = 0.8 * pow(max(dot(ViewV, ReflectionV), 0.0), 128.0) * vec3(1.0, 1.0, 1.0); //arbitrary shininess and specular strength
 
     vec3 phong = ambient + diffuse + specular;
-    
+
     // Phong
     color = fColor * vec4(phong, 1.0);
 

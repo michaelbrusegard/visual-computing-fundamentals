@@ -12,15 +12,14 @@ use std::ffi::CString;
 use std::sync::{Arc, Mutex};
 use std::{mem, os::raw::c_void, ptr};
 
-mod shader;
-mod util;
 mod mesh;
 mod scene_graph;
+mod shader;
 mod toolbox;
+mod util;
 
 use gl::types::GLenum;
 use glm::{inverse, Vec3};
-use shader::Shader;
 use glutin::event::{
    DeviceEvent,
    ElementState::{Pressed, Released},
@@ -31,6 +30,7 @@ use glutin::event::{
 use glutin::event_loop::ControlFlow;
 use mesh::{Helicopter, Mesh};
 use scene_graph::{Node, SceneNode};
+use shader::Shader;
 use toolbox::Heading;
 
 // initial window size
@@ -72,14 +72,8 @@ unsafe fn gen_vbo_buffer<T>(array_data: &[T], target: GLenum, usage: GLenum) {
    gl::GenBuffers(1, &mut data_vbo);
    gl::BindBuffer(target, data_vbo);
 
-   gl::BufferData(
-      target,
-      byte_size_of_array(array_data),
-      pointer_to_array(array_data),
-      usage
-   );
+   gl::BufferData(target, byte_size_of_array(array_data), pointer_to_array(array_data), usage);
 }
-
 
 // == // Generate your VAO here
 unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32], normals: &[f32]) -> u32 {
@@ -96,7 +90,6 @@ unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32], normals:
    gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, vertex_stride, ptr::null());
    gl::EnableVertexAttribArray(0);
 
-
    // Generate a normal VBO and bind it
    gen_vbo_buffer(normals, gl::ARRAY_BUFFER, gl::STATIC_DRAW);
 
@@ -104,7 +97,6 @@ unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32], normals:
    let normal_stride: i32 = 3 * size_of::<f32>();
    gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, normal_stride, ptr::null());
    gl::EnableVertexAttribArray(1);
-
 
    // Generate a color VBO and bind it
    gen_vbo_buffer(colors, gl::ARRAY_BUFFER, gl::STATIC_DRAW);
@@ -122,10 +114,11 @@ unsafe fn create_vao(vertices: &[f32], indices: &[u32], colors: &[f32], normals:
    vao
 }
 
-unsafe fn draw_scene(node: &scene_graph::SceneNode, 
+unsafe fn draw_scene(
+   node: &scene_graph::SceneNode,
    view_projection_matrix: &glm::Mat4,
    transformation_so_far: &glm::Mat4,
-   shader: &Shader
+   shader: &Shader,
 ) {
    let mut new_transform_so_far: glm::Mat4 = *transformation_so_far;
    if node.index_count != -1 {
@@ -145,9 +138,10 @@ unsafe fn draw_scene(node: &scene_graph::SceneNode,
       let mcs_rotation: glm::Mat4 = mcs_rot_x * mcs_rot_y * mcs_rot_z;
 
       // We decide to affect rotation before translation.
-      let mcs_transform: glm::Mat4 = mcs_translate_ref * mcs_translate * mcs_rotation * inverse(&mcs_translate_ref);
+      let mcs_transform: glm::Mat4 =
+         mcs_translate_ref * mcs_translate * mcs_rotation * inverse(&mcs_translate_ref);
 
-      new_transform_so_far *= mcs_transform; 
+      new_transform_so_far *= mcs_transform;
 
       gl::UniformMatrix4fv(projection_loc, 1, gl::FALSE, view_projection_matrix.as_ptr());
       gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, new_transform_so_far.as_ptr());
@@ -208,7 +202,10 @@ fn main() {
    // Acquire the OpenGL Context and load the function pointers.
    // Uncomment these if you want to use the mouse for controls, but want it to be confined to the screen and/or invisible.
 
-   windowed_context.window().set_cursor_grab(glutin::window::CursorGrabMode::Confined).expect("failed to grab cursor");
+   windowed_context
+      .window()
+      .set_cursor_grab(glutin::window::CursorGrabMode::Confined)
+      .expect("failed to grab cursor");
    windowed_context.window().set_cursor_visible(false);
 
    let context = unsafe { windowed_context.make_current().unwrap() };
@@ -246,27 +243,47 @@ fn main() {
    let speed: f32 = 0.05;
    let sens: f32 = 0.25;
 
-   let lunar_terrain_mesh: Mesh  = mesh::Terrain::load("resources/lunarsurface.obj");
+   let lunar_terrain_mesh: Mesh = mesh::Terrain::load("resources/lunarsurface.obj");
    let helicopter_mesh: Helicopter = mesh::Helicopter::load("resources/helicopter.obj");
 
    // == // Set up your VAO around here
    // Old vertices and indices for the 3D cube lies in restCode.txt for cleanup.
 
-   let lunar_terrain_vao = unsafe { 
+   let lunar_terrain_vao = unsafe {
       create_vao(
-         &lunar_terrain_mesh.vertices, 
+         &lunar_terrain_mesh.vertices,
          &lunar_terrain_mesh.indices,
          &lunar_terrain_mesh.colors,
-         &lunar_terrain_mesh.normals
+         &lunar_terrain_mesh.normals,
       )
    };
 
    let helicopter_vaos: Vec<u32> = unsafe {
       vec![
-         create_vao(&helicopter_mesh.body.vertices, &helicopter_mesh.body.indices, &helicopter_mesh.body.colors, &helicopter_mesh.body.normals),
-         create_vao(&helicopter_mesh.door.vertices, &helicopter_mesh.door.indices, &helicopter_mesh.door.colors, &helicopter_mesh.door.normals),
-         create_vao(&helicopter_mesh.main_rotor.vertices, &helicopter_mesh.main_rotor.indices, &helicopter_mesh.main_rotor.colors, &helicopter_mesh.main_rotor.normals),
-         create_vao(&helicopter_mesh.tail_rotor.vertices, &helicopter_mesh.tail_rotor.indices, &helicopter_mesh.tail_rotor.colors, &helicopter_mesh.tail_rotor.normals)
+         create_vao(
+            &helicopter_mesh.body.vertices,
+            &helicopter_mesh.body.indices,
+            &helicopter_mesh.body.colors,
+            &helicopter_mesh.body.normals,
+         ),
+         create_vao(
+            &helicopter_mesh.door.vertices,
+            &helicopter_mesh.door.indices,
+            &helicopter_mesh.door.colors,
+            &helicopter_mesh.door.normals,
+         ),
+         create_vao(
+            &helicopter_mesh.main_rotor.vertices,
+            &helicopter_mesh.main_rotor.indices,
+            &helicopter_mesh.main_rotor.colors,
+            &helicopter_mesh.main_rotor.normals,
+         ),
+         create_vao(
+            &helicopter_mesh.tail_rotor.vertices,
+            &helicopter_mesh.tail_rotor.indices,
+            &helicopter_mesh.tail_rotor.colors,
+            &helicopter_mesh.tail_rotor.normals,
+         ),
       ]
    };
 
@@ -274,17 +291,19 @@ fn main() {
       helicopter_mesh.body.index_count,
       helicopter_mesh.door.index_count,
       helicopter_mesh.main_rotor.index_count,
-      helicopter_mesh.tail_rotor.index_count
+      helicopter_mesh.tail_rotor.index_count,
    ];
 
-   let mut scene: Node = SceneNode::new(); 
+   let mut scene: Node = SceneNode::new();
    let mut terrain_scene_node: Node = SceneNode::from_vao(lunar_terrain_vao, lunar_terrain_mesh.index_count);
 
    for i in 0..5 {
       let mut heli_body_scene_node: Node = SceneNode::from_vao(helicopter_vaos[0], helicopter_indices[0]);
       let mut heli_door_scene_node: Node = SceneNode::from_vao(helicopter_vaos[1], helicopter_indices[1]);
-      let mut heli_main_rotor_scene_node: Node = SceneNode::from_vao(helicopter_vaos[2], helicopter_indices[2]);
-      let mut heli_tail_rotor_scene_node: Node = SceneNode::from_vao(helicopter_vaos[3], helicopter_indices[3]);  
+      let mut heli_main_rotor_scene_node: Node =
+         SceneNode::from_vao(helicopter_vaos[2], helicopter_indices[2]);
+      let mut heli_tail_rotor_scene_node: Node =
+         SceneNode::from_vao(helicopter_vaos[3], helicopter_indices[3]);
 
       heli_tail_rotor_scene_node.reference_point = glm::vec3(0.35, 2.3, 10.4);
       heli_body_scene_node.add_child(&heli_door_scene_node);
@@ -310,10 +329,12 @@ fn main() {
    let time_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, name.as_ptr()) };
 
    let oscillating_value_name: CString = CString::new("oscVal").unwrap();
-   let oscillating_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
+   let oscillating_loc: i32 =
+      unsafe { gl::GetUniformLocation(simple_shader.program_id, oscillating_value_name.as_ptr()) };
 
    let camera_pos_name: CString = CString::new("cameraPosition").unwrap();
-   let camera_pos_loc: i32 = unsafe { gl::GetUniformLocation(simple_shader.program_id, camera_pos_name.as_ptr()) };
+   let camera_pos_loc: i32 =
+      unsafe { gl::GetUniformLocation(simple_shader.program_id, camera_pos_name.as_ptr()) };
 
    // Start the event loop -- This is where window events are initially handled
    el.run(move |event, _, control_flow| {
@@ -347,29 +368,22 @@ fn main() {
                         let i = keys.iter().position(|&k| k == keycode).unwrap();
                         keys.remove(i);
                      }
-                     match keycode {
-                        Escape => {
-                           pause_mode = !pause_mode;
-                           context.window().set_cursor_visible(pause_mode);
-                           if pause_mode {
-                              let _ = context.window().set_cursor_grab(glutin::window::CursorGrabMode::None);
-                           }
-                           else {
-                              let _ = context.window().set_cursor_grab(glutin::window::CursorGrabMode::Confined);
-                           }
+                     if keycode == Escape {
+                        pause_mode = !pause_mode;
+                        context.window().set_cursor_visible(pause_mode);
+                        if pause_mode {
+                           let _ = context.window().set_cursor_grab(glutin::window::CursorGrabMode::None);
+                        } else {
+                           let _ = context.window().set_cursor_grab(glutin::window::CursorGrabMode::Confined);
                         }
-                        _ => {}
                      }
                   }
                   Pressed => {
                      if !keys.contains(&keycode) {
                         keys.push(keycode);
                      }
-                     match keycode {
-                        Q => {
-                           *control_flow = ControlFlow::Exit;
-                        }
-                        _ => {}
+                     if keycode == Q {
+                        *control_flow = ControlFlow::Exit;
                      }
                   }
                }
@@ -405,11 +419,11 @@ fn main() {
             cam_dir.x = glm::cos(&glm::radians(&glm::vec1(yaw))).x;
             cam_dir.z = glm::sin(&glm::radians(&glm::vec1(yaw))).x;
             cam_dir = cam_dir.normalize();
-            let cam_dir_left4: glm::Vec4 = glm::rotation((90.0 as f32).to_radians(), &glm::vec3(0.0, 1.0, 0.0)) * 
-                                           glm::vec4(cam_dir.x, cam_dir.y, cam_dir.z, 1.0);
+            let rotation_x: glm::Mat4 = glm::rotation(90.0_f32.to_radians(), &glm::vec3(1.0, 0.0, 0.0));
+            let cam_dir_left4: glm::Vec4 = glm::rotation((90.0_f32).to_radians(), &glm::vec3(0.0, 1.0, 0.0))
+               * glm::vec4(cam_dir.x, cam_dir.y, cam_dir.z, 1.0);
             let mut cam_dir_left: glm::Vec3 = glm::vec3(cam_dir_left4.x, cam_dir_left4.y, cam_dir_left4.z);
             cam_dir_left = cam_dir_left.normalize();
-
 
             // Handle keyboard input
             if let Ok(keys) = arc_pressed_keys.lock() {
@@ -453,17 +467,15 @@ fn main() {
                let delta_x: f32 = delta.0;
                let delta_y: f32 = delta.1;
 
-               if !pause_mode { yaw += delta_x * sens; };
-               if !pause_mode { pitch += delta_y * sens; };
+               if !pause_mode {
+                  yaw += delta_x * sens;
+               };
+               if !pause_mode {
+                  pitch += delta_y * sens;
+               };
 
                // Clamp
-               if pitch > 80.0 {
-                  pitch = 80.0;
-               }
-               else if pitch < -80.0 {
-                  pitch = -80.0;
-               }
-
+               pitch = pitch.clamp(-80.0, 80.0);
 
                *delta = (0.0, 0.0); // reset when done
             }
@@ -477,19 +489,17 @@ fn main() {
 
             let proj_mat: glm::Mat4 = glm::perspective(
                CURRENT_SCREEN_W as f32 / CURRENT_SCREEN_H as f32,
-               60.0_f32.to_radians(), 
-               1.0, 
+               60.0_f32.to_radians(),
+               1.0,
                1000.0,
             );
 
-
             let camera_projection_mat: glm::Mat4 = proj_mat * rotation_x * view;
-
 
             unsafe {
                // Clear the color and depth buffers
                gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
-               // gl::ClearColor(1.0, 1.0, 1.0, 1.0); // night sky
+                                                         // gl::ClearColor(1.0, 1.0, 1.0, 1.0); // night sky
                gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
                // gl::Disable(gl::CULL_FACE); //Used to see affine transformations
@@ -497,14 +507,14 @@ fn main() {
                // == // Issue the necessary gl:: commands to draw your scene here
                for i in 0..terrain_scene_node.n_children() {
                   let heli_heading: Heading = toolbox::simple_heading_animation(elapsed + i as f32 * 300.0);
-   
+
                   let heli_body: &mut SceneNode = terrain_scene_node.get_child(i);
                   heli_body.rotation = glm::vec3(heli_heading.pitch, heli_heading.yaw, heli_heading.roll);
                   heli_body.position = glm::vec3(heli_heading.x, elapsed.sin(), heli_heading.z);
-   
+
                   let heli_main_rotor: &mut SceneNode = heli_body.get_child(1);
                   heli_main_rotor.rotation.y += (delta_time * 1000.0).to_radians();
-   
+
                   let heli_tail_rotor: &mut SceneNode = heli_body.get_child(2);
                   heli_tail_rotor.rotation.x += (delta_time * 1000.0).to_radians();
                }
@@ -521,14 +531,14 @@ fn main() {
                // This method is bad since we're drawing 5 times for all nodes.
                // for i in 0..5 {
                //    let heli_heading: Heading = toolbox::simple_heading_animation(elapsed + i as f32 * 300.0);
-   
+
                //    let heli_body: &mut SceneNode = terrain_scene_node.get_child(i);
                //    heli_body.rotation = glm::vec3(heli_heading.pitch, heli_heading.yaw, heli_heading.roll);
                //    heli_body.position = glm::vec3(heli_heading.x, elapsed.sin(), heli_heading.z);
-   
+
                //    let heli_main_rotor: &mut SceneNode = heli_body.get_child(1);
                //    heli_main_rotor.rotation.y += (delta_time * 1000.0).to_radians();
-   
+
                //    let heli_tail_rotor: &mut SceneNode = heli_body.get_child(2);
                //    heli_tail_rotor.rotation.x += (delta_time * 1000.0).to_radians();
                //    draw_scene(&scene, &camera_projection_mat, &glm::identity(), &simple_shader);
