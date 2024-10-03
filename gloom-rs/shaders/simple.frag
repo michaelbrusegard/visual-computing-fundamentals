@@ -10,6 +10,7 @@ in vec3 fPosition; // for phong lighting
 in vec4 fColor;
 in vec3 fNormal;
 out vec4 color;
+in vec4 vertColor;
 
 // Globals
 vec3 lightDirection = normalize(vec3(0.8, -0.5, 0.6));
