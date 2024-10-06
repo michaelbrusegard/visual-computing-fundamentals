@@ -1,0 +1,87 @@
+ let vertices: Vec<f32> = vec![
+               // Front
+               -0.4, 0.4, 0.4, // Top left
+               -0.4, -0.4, 0.4, // Bottom left
+               0.4, -0.4, 0.4, // Bottom right
+               0.4, 0.4, 0.4, // Top right
+
+               // Back
+               -0.4, 0.4, -0.4, // Top left
+               -0.4, -0.4, -0.4, // Bottom Left
+               0.4, -0.4, -0.4, // Bottom right
+               0.4, 0.4, -0.4, // Top right
+            ];
+
+            let colors: Vec<f32> = vec![
+               0.9, 0.2, 0.9, 1.0,
+               0.4, 0.9, 0.4, 1.0,
+               0.9, 0.9, 0.2, 1.0,
+               0.4, 0.9, 0.9, 1.0,
+
+               0.3, 0.4, 0.6, 1.0,
+               0.4, 0.9, 0.5, 1.0,
+               0.2, 0.9, 0.2, 1.0,
+               0.8, 0.9, 0.2, 1.0
+            ];
+
+            let indices: Vec<u32> = vec![
+               0, 1, 2, 3, 0, 2, // Front
+               0, 4, 1, 4, 5, 1, // Left
+               3, 2, 6, 6, 7, 3, // Right
+               6, 5, 4, 6, 4, 7, // Back
+               0, 7, 4, 0, 3, 7, // Top
+               6, 1, 5, 6, 2, 1, // Bottom
+            ];
+
+            // let indices = fill_indices(&vertices);
+
+
+Circle vertices things
+// Draw circle from the given location
+// // * 'location' - the centre position of the circle.
+// // * 'r' - the radius of the circle, minimum 0.01f.
+// // * 'n' - amount of vertices to define the circle, minimum 3.
+// fn circle_vertices(location: Vec<f32>, r: f32, n: u32) -> Vec<f32> {
+//    if n < 3 || r < 0.01 {
+//       // Return empty vertices
+//       return vec![];
+//    }
+
+//    // Calculate degrees between each verticy
+//    let angle: f32 = (2.0 * std::f32::consts::PI) / n as f32;
+
+//    // Calculate the x and y positions where same index belongs to eachother
+//    let mut vertices: Vec<f32> = Vec::new();
+
+//    for i in 0..n {
+//       let x: f32 = r * f32::cos(angle * i as f32) - location[0];
+//       let y: f32 = r * f32::sin(angle * i as f32) - location[1];
+//       vertices.push(x);
+//       vertices.push(y);
+//       vertices.push(0.0 + location[2]);
+//    }
+
+//    vertices
+// }
+
+// fn fill_circle_indices(vertices: &[f32]) -> Vec<u32> {
+//    let mut i: u32 = 1;
+//    let mut indices: Vec<u32> = Vec::new();
+
+//    while i < vertices.len() as u32 {
+//       indices.push(0);
+//       indices.push(i);
+//       indices.push(i + 1);
+//       i += 1;
+//    }
+
+//    indices
+// }
+
+fn fill_indices(vertices: &[f32]) -> Vec<u32> {
+   let mut indices: Vec<u32> = Vec::new();
+   for i in 0..(vertices.len() / 3) {
+      indices.push(i as u32);
+   }
+   indices
+}
