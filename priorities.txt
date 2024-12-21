@@ -1,0 +1,17 @@
+Transformations D
+Clipping D
+Model Transformation D
+Scene Graphs E
+Projections & Viewing Transformation F
+Back-face and Frustum Culling D
+Hidden Surface Elimination F
+Colour F
+Rasterization F
+Antialiasing F
+Illumination F
+Spatial, intuition, point, histogram F
+Filtering, neighborhood F
+Forward and backward pass F
+Frequency domain 2 F
+Segmentation F
+Morphology F
